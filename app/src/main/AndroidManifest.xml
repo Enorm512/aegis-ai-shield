@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Only to turn DNS protection back on after a restart when the person had it on. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Package visibility for the "who can control or read this phone" list only: makes apps that offer these
          high-power services visible so their names can be shown. No QUERY_ALL_PACKAGES. -->
     <queries>
@@ -38,6 +40,13 @@
              Not exported: reachable only through the one-shot, immutable launcher Aegis hands the agent. -->
         <activity android:name=".BrokerActivity" android:exported="false" android:excludeFromRecents="true" android:noHistory="true"
             android:taskAffinity="" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Restores DNS protection after a restart or update. Not exported; these broadcasts come only from the system. -->
+        <receiver android:name=".BootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <!-- Voluntary AI-assistant interface (Messenger). Open to bind, but serves only apps the person paired; caller UID and signing certificate are checked on every call. -->
         <service android:name=".AgentGatewayService" android:exported="true">
             <intent-filter>

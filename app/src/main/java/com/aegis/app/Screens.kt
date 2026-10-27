@@ -452,7 +452,7 @@ private fun MoreScreen(s: UiState, vm: AegisViewModel, tx: Tx, context: Context,
                 SectionTitle(tx.t("About Aegis", "Om Aegis"), icon = R.drawable.ic_info)
                 Text(tx.t("No account, no ads, no analytics, no saved scan history. Network access is used only by the optional DNS protection.", "Ingen konto, ingen reklame, ingen analyse, ingen lagret skannehistorikk. Nettverkstilgang brukes bare av den valgfrie DNS-beskyttelsen."), style = MaterialTheme.typography.bodyMedium)
                 Text(tx.t("Aegis finds evidence; it cannot guarantee safety. Local checks can miss threats and flag harmless things. Never share passwords or one-time codes.", "Aegis finner indikasjoner; den kan ikke garantere trygghet. Lokale sjekker kan overse trusler og flagge harmløse ting. Del aldri passord eller engangskoder."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(tx.t("Version 0.8.2-rc13 · preview build: DNS protection, the AI agent guard and the release build have not been tested on real devices yet.", "Versjon 0.8.2-rc13 · forhåndsversjon: DNS-beskyttelse, KI-agentvakten og utgivelsesbygget er ikke testet på ekte enheter ennå."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tx.t("Version 0.8.3-rc14 · preview build: DNS protection, the AI agent guard and the release build have not been tested on real devices yet.", "Versjon 0.8.3-rc14 · forhåndsversjon: DNS-beskyttelse, KI-agentvakten og utgivelsesbygget er ikke testet på ekte enheter ennå."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

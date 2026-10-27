@@ -20,6 +20,25 @@ object Protection {
 
     fun setRunning(value: Boolean) { mutableRunning.value = value }
 
+    /** Whether the person wants protection on: set by turning it on, cleared by Stop or when the system revokes the VPN. Survives restarts. */
+    fun wanted(context: Context) = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("wanted", false)
+    fun setWanted(context: Context, value: Boolean) {
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("wanted", value).commit()
+    }
+
+    enum class Restore { NOT_WANTED, NEEDS_CONSENT, STARTED, FAILED }
+
+    /**
+     * After a phone restart or an app update: turns protection back on if the person had it on and Android still holds
+     * their VPN consent. Without consent (another VPN app took over, or consent was withdrawn) it never asks by itself;
+     * it posts a notice so the person can turn it on again.
+     */
+    fun restoreAfterRestart(context: Context): Restore {
+        if (!wanted(context)) return Restore.NOT_WANTED
+        if (android.net.VpnService.prepare(context) != null) { runCatching { RestartNotice.needsConsent(context) }; return Restore.NEEDS_CONSENT }
+        return try { AegisVpnService.resume(context); Restore.STARTED } catch (_: RuntimeException) { runCatching { RestartNotice.needsConsent(context) }; Restore.FAILED }
+    }
+
     @Synchronized fun load(context: Context) {
         if (loaded) return
         val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

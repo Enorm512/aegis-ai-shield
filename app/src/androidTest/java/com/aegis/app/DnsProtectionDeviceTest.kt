@@ -70,4 +70,40 @@ class DnsProtectionDeviceTest {
             }
         }
     }
+
+    /**
+     * What the boot receiver does after a restart, called directly (a test cannot send the system's boot broadcast).
+     * The real reboot is exercised separately by the CI boot-restart job.
+     */
+    @Test fun restartRestoresProtectionOnlyWhenWantedAndConsented() {
+        shell("appops set ${context.packageName} ACTIVATE_VPN allow")
+        ActivityScenario.launch<MainActivity>(Intent(context, MainActivity::class.java)).use {
+            try {
+                Protection.setWanted(context, false)
+                assertEquals(Protection.Restore.NOT_WANTED, Protection.restoreAfterRestart(context))
+                assertTrue(!Protection.running.value)
+
+                Protection.setWanted(context, true)
+                assertEquals(Protection.Restore.STARTED, Protection.restoreAfterRestart(context))
+                waitUntil(what = "tunnel up after restore") { Protection.running.value }
+                assertTrue("restoring does not change the person's choice", Protection.wanted(context))
+
+                // Stop from the notification or the app clears the choice, so the next restart leaves protection off.
+                AegisVpnService.stop(context)
+                waitUntil(what = "tunnel down") { !Protection.running.value }
+                assertTrue(!Protection.wanted(context))
+                assertEquals(Protection.Restore.NOT_WANTED, Protection.restoreAfterRestart(context))
+
+                // Consent gone (another VPN app, or withdrawn): never started silently.
+                Protection.setWanted(context, true)
+                shell("appops set ${context.packageName} ACTIVATE_VPN default")
+                if (VpnService.prepare(context) != null) assertEquals(Protection.Restore.NEEDS_CONSENT, Protection.restoreAfterRestart(context))
+                assertTrue(!Protection.running.value)
+            } finally {
+                shell("appops set ${context.packageName} ACTIVATE_VPN allow")
+                Protection.setWanted(context, false)
+                if (Protection.running.value) { AegisVpnService.stop(context); waitUntil(what = "tunnel down") { !Protection.running.value } }
+            }
+        }
+    }
 }

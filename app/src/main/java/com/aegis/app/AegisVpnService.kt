@@ -49,12 +49,15 @@ class AegisVpnService : VpnService() {
     private val powerTask = object : Runnable { override fun run() { runCatching { PowerWatch.backgroundCheck(this@AegisVpnService) }; powerCheck.postDelayed(this, POWER_CHECK_MS) } }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) { stopProtection(); stopSelf(); return START_NOT_STICKY }
+        if (intent?.action == ACTION_STOP) { Protection.setWanted(this, false); stopProtection(); stopSelf(); return START_NOT_STICKY }
+        // A null intent is Android restarting the service after it killed the process; only resume what the person turned on.
+        if (intent == null && (!Protection.wanted(this) || prepare(this) != null)) { stopSelf(); return START_NOT_STICKY }
         startProtection()
-        return START_NOT_STICKY
+        return if (Protection.wanted(this)) START_STICKY else START_NOT_STICKY
     }
 
-    override fun onRevoke() { stopProtection(); stopSelf() }
+    /** The person withdrew consent or another VPN app took over: protection stays off until the person turns it on again. */
+    override fun onRevoke() { Protection.setWanted(this, false); stopProtection(); stopSelf() }
     override fun onDestroy() { stopProtection(); super.onDestroy() }
 
     @Synchronized private fun startProtection() {
@@ -166,7 +169,10 @@ class AegisVpnService : VpnService() {
         private val ADDR4 = byteArrayOf(10, 111, 0xDE.toByte(), 2)
         private val ADDR6 = byteArrayOf(0xfd.toByte(), 0x00, 0xae.toByte(), 0x91.toByte(), 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2)
 
-        fun start(context: Context) { context.startForegroundService(Intent(context, AegisVpnService::class.java)) }
+        /** The person turned protection on (consent already given). */
+        fun start(context: Context) { Protection.setWanted(context, true); resume(context) }
+        /** Starts the tunnel without changing what the person chose; used after a restart. */
+        fun resume(context: Context) { context.startForegroundService(Intent(context, AegisVpnService::class.java)) }
         fun stop(context: Context) { context.startService(Intent(context, AegisVpnService::class.java).setAction(ACTION_STOP)) }
     }
 }

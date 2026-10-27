@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 root = Path(__file__).resolve().parents[1]
 manifest = ET.parse(root / 'app/src/main/AndroidManifest.xml').getroot()
 ns = '{http://schemas.android.com/apk/res/android}'
-ALLOWED = {'INTERNET', 'ACCESS_NETWORK_STATE', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_SYSTEM_EXEMPTED', 'POST_NOTIFICATIONS'}
+ALLOWED = {'INTERNET', 'ACCESS_NETWORK_STATE', 'FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_SYSTEM_EXEMPTED', 'POST_NOTIFICATIONS', 'RECEIVE_BOOT_COMPLETED'}
 requested = {e.get(ns + 'name').rsplit('.', 1)[1] for e in manifest.findall('uses-permission')}
 assert requested == ALLOWED, f'Permission set changed: {requested ^ ALLOWED}'
 app = manifest.find('application')
@@ -22,7 +22,10 @@ assert svc.get(ns + 'name') == '.AegisVpnService' and svc.get(ns + 'permission')
 assert svc.get(ns + 'foregroundServiceType') == 'systemExempted'
 acts = {x.get(ns + 'name'): x.get(ns + 'exported') for x in app.findall('activity')}
 assert acts == {'.MainActivity': 'true', '.BrokerActivity': 'false'}, f'Activities changed: {acts}'
-assert not app.findall('receiver') and not app.findall('provider'), 'No receivers/providers expected'
+receivers = app.findall('receiver')
+assert [(r.get(ns + 'name'), r.get(ns + 'exported')) for r in receivers] == [('.BootReceiver', 'false')], 'Only the non-exported boot receiver may be declared'
+assert sorted(a.get(ns + 'name') for a in receivers[0].iter('action')) == ['android.intent.action.BOOT_COMPLETED', 'android.intent.action.MY_PACKAGE_REPLACED']
+assert not app.findall('provider'), 'No providers expected'
 QUERIES = {'android.accessibilityservice.AccessibilityService', 'android.service.notification.NotificationListenerService', 'android.view.InputMethod',
            'android.app.action.DEVICE_ADMIN_ENABLED', 'android.provider.Telephony.SMS_DELIVER', 'android.net.VpnService'}
 queried = {a.get(ns + 'name') for q in manifest.findall('queries') for a in q.iter('action')}
