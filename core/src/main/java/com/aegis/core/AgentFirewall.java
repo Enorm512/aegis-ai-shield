@@ -37,7 +37,23 @@ public final class AgentFirewall {
         /** Aegis itself carried out a brokered action, or could not. */
         BROKER_PERFORMED, BROKER_FAILED,
         /** Aegis signed an approval token a server can check; reason = how it was granted. */
-        TOKEN_ISSUED }
+        TOKEN_ISSUED,
+        /** Denials beyond the per-minute logging budget for one agent, summarised as one entry (reason NOT_LOGGED_n). */
+        DENIALS_SUMMARISED,
+        /** An agent hit the request rate limit (security log; at most once per agent per 10 minutes). */
+        RATE_LIMIT_HIT }
+
+    /**
+     * Events that are also written to the separate security log, which ordinary request traffic cannot rotate away:
+     * changes the person made, the kill switch, log damage and rate-limit hits. All are bounded by human action or throttled.
+     */
+    private static final Set<Event> SECURITY_EVENTS = Collections.unmodifiableSet(EnumSet.of(Event.PAIRED, Event.PAIR_REJECTED, Event.UNPAIRED,
+        Event.KILL_SWITCH_ON, Event.KILL_SWITCH_OFF, Event.LOG_DAMAGED, Event.USER_APPROVED, Event.USER_DENIED, Event.RATE_LIMIT_HIT));
+    public static final int MAX_SECURITY = 300;
+    /** Denials logged individually per agent per minute; the rest are counted and summarised. */
+    public static final int DENIALS_LOGGED_PER_MINUTE = 5;
+    private static final int MAX_DENY_WINDOWS = 64;
+    private static final long RATE_NOTE_SECONDS = 600;
     /** type and verdict are null for events that have none. */
     public record AuditEntry(Instant time, Event event, String agentId, ActionType type, String destinationHost, Verdict verdict, List<String> reasons, String chainHash) {}
 
@@ -55,10 +71,51 @@ public final class AgentFirewall {
     private final Set<String> trustedDestinations = new HashSet<>();
     private final Map<String, Deque<Instant>> recent = new HashMap<>();
     private final Map<String, Pending> pending = new LinkedHashMap<>();
-    private final Deque<AuditEntry> audit = new ArrayDeque<>();
-    private String chain = "genesis", anchor = "genesis"; // anchor = hash of the entry just before the oldest retained one
+    private final Chain log = new Chain(AUDIT_MAGIC, MAX_AUDIT);
+    private final Chain security = new Chain(SECURITY_MAGIC, MAX_SECURITY);
+    private static final class DenyWindow { final Instant start; int logged, suppressed; DenyWindow(Instant s) { start = s; } }
+    private final Map<String, DenyWindow> denyWindows = new LinkedHashMap<>();
+    private final Map<String, Instant> rateNotes = new LinkedHashMap<>();
+    private long revision; // changes whenever anything that is saved changes; lets the app skip writes when nothing happened
     private long financialAutoLimit = 0; // any financial action needs approval by default
     private boolean lockdown;
+
+    /**
+     * One bounded, SHA-256 hash-chained log. anchor = hash of the entry just before the oldest retained one, so
+     * dropping the oldest entries keeps the rest verifiable while any edit, reordering or removal from the middle breaks it.
+     */
+    private static final class Chain {
+        final String magic; final int max;
+        final Deque<AuditEntry> entries = new ArrayDeque<>();
+        String head = "genesis", anchor = "genesis";
+        Chain(String magic, int max) { this.magic = magic; this.max = max; }
+
+        void add(AuditEntry draft) {
+            String h = sha(head + auditBody(draft));
+            head = h;
+            if (entries.size() >= max) anchor = entries.removeFirst().chainHash();
+            entries.addLast(new AuditEntry(draft.time(), draft.event(), draft.agentId(), draft.type(), draft.destinationHost(), draft.verdict(), draft.reasons(), h));
+        }
+
+        String export() {
+            StringBuilder b = new StringBuilder(magic).append('\n').append("anchor ").append(anchor).append('\n').append("head ").append(head).append('\n');
+            for (AuditEntry e : entries)
+                b.append(e.time()).append('\t').append(e.event()).append('\t').append(e.agentId()).append('\t').append(e.type() == null ? "-" : e.type().name()).append('\t')
+                 .append(e.destinationHost()).append('\t').append(e.verdict() == null ? "-" : e.verdict().name()).append('\t').append(String.join(",", e.reasons())).append('\t').append(e.chainHash()).append('\n');
+            return b.toString();
+        }
+
+        /** True when intact. Otherwise the chain restarts from a hash of the damaged text and the caller records LOG_DAMAGED. */
+        boolean restore(String text) {
+            Restored r = parse(text, magic, max);
+            if (r != null && verifyChain(r.entries(), r.anchor(), r.head())) {
+                entries.clear(); entries.addAll(r.entries()); anchor = r.anchor(); head = r.head();
+                return true;
+            }
+            entries.clear(); anchor = sha("damaged|" + text); head = anchor;
+            return false;
+        }
+    }
 
     public AgentFirewall(Clock clock) { this.clock = clock; }
 
@@ -68,6 +125,7 @@ public final class AgentFirewall {
      */
     public synchronized List<String> killSwitch() {
         List<String> was = new ArrayList<>(new TreeSet<>(agents.keySet()));
+        flushDenials(true);
         agents.clear(); pending.clear(); recent.clear();
         lockdown = true;
         append(Event.KILL_SWITCH_ON, "", null, "", null, Collections.singletonList("AGENTS_REMOVED_" + was.size()));
@@ -97,7 +155,7 @@ public final class AgentFirewall {
 
     public synchronized void registerAgent(String agentId, Set<ActionType> permitted) { agents.put(agentId, EnumSet.copyOf(permitted.isEmpty() ? EnumSet.noneOf(ActionType.class) : permitted)); }
     /** Also drops that agent's waiting and approved-but-unused approvals: a removed agent keeps nothing it was granted. */
-    public synchronized void unregisterAgent(String agentId) { agents.remove(agentId); pending.values().removeIf(p -> p.agentId.equals(agentId)); }
+    public synchronized void unregisterAgent(String agentId) { agents.remove(agentId); if (pending.values().removeIf(p -> p.agentId.equals(agentId))) revision++; }
     public synchronized void trustDestination(String domainOrHost) { trustedDestinations.add(domainOrHost.toLowerCase(Locale.ROOT)); }
     public synchronized void untrustDestination(String domainOrHost) { trustedDestinations.remove(domainOrHost.toLowerCase(Locale.ROOT)); }
     /** True for a plain host name the person may trust: 2+ labels of letters, digits and hyphens, not an IP address, at most 253 characters. */
@@ -238,10 +296,18 @@ public final class AgentFirewall {
 
     private void expire() { Instant now = clock.instant(); pending.values().removeIf(p -> now.isAfter(p.expires)); }
 
-    public synchronized List<AuditEntry> auditLog() { return Collections.unmodifiableList(new ArrayList<>(audit)); }
+    public synchronized List<AuditEntry> auditLog() { return Collections.unmodifiableList(new ArrayList<>(log.entries)); }
 
     /** Recomputes the hash chain over the retained entries; false if any retained entry was altered, reordered or removed from the middle. */
-    public synchronized boolean verifyAudit() { return verifyChain(new ArrayList<>(audit), anchor, chain); }
+    public synchronized boolean verifyAudit() { return verifyChain(new ArrayList<>(log.entries), log.anchor, log.head); }
+
+    /** The separate security log (see SECURITY_EVENTS): request traffic cannot rotate these entries away. */
+    public synchronized List<AuditEntry> securityLog() { return Collections.unmodifiableList(new ArrayList<>(security.entries)); }
+    public synchronized boolean verifySecurityLog() { return verifyChain(new ArrayList<>(security.entries), security.anchor, security.head); }
+    public synchronized String securityHead() { return security.head; }
+
+    /** Increases whenever saved state (either log or the approvals) changed. */
+    public synchronized long revision() { return revision; }
 
     /** Verifies an exported copy of the log against the anchor and head hashes. */
     public static boolean verifyChain(List<AuditEntry> entries, String anchor, String head) {
@@ -252,12 +318,47 @@ public final class AgentFirewall {
         }
         return prev.equals(head);
     }
-    public synchronized String auditAnchor() { return anchor; }
-    public synchronized String auditHead() { return chain; }
+    public synchronized String auditAnchor() { return log.anchor; }
+    public synchronized String auditHead() { return log.head; }
 
+    /**
+     * Logs a decision. Denials are budgeted per agent per minute: the first DENIALS_LOGGED_PER_MINUTE are logged, the
+     * rest only counted and summarised in one DENIALS_SUMMARISED entry, so a flooding agent can neither rotate older
+     * evidence out of the log nor force a disk write per request. Rate-limit hits also go to the security log (throttled).
+     */
     private Decision record(Request r, Decision d) {
-        append(Event.DECISION, r == null ? "" : String.valueOf(r.agentId()), r == null ? null : r.type(), r == null ? "" : hostOf(r.destination()), d.verdict(), d.reasons());
+        String agent = r == null ? "" : safeAgent(String.valueOf(r.agentId()));
+        Instant now = clock.instant();
+        flushDenials(false);
+        if (d.reasons().contains("RATE_LIMITED")) {
+            Instant last = rateNotes.get(agent);
+            if (last == null || !now.isBefore(last.plusSeconds(RATE_NOTE_SECONDS))) {
+                if (rateNotes.size() >= MAX_DENY_WINDOWS && !rateNotes.containsKey(agent)) rateNotes.remove(rateNotes.keySet().iterator().next());
+                rateNotes.put(agent, now);
+                append(Event.RATE_LIMIT_HIT, agent, r == null ? null : r.type(), "", Verdict.DENY, Collections.singletonList("RATE_LIMITED"));
+            }
+        }
+        if (d.verdict() == Verdict.DENY) {
+            String key = denyWindows.containsKey(agent) || denyWindows.size() < MAX_DENY_WINDOWS ? agent : "*";
+            DenyWindow w = denyWindows.computeIfAbsent(key, k -> new DenyWindow(now));
+            if (w.logged >= DENIALS_LOGGED_PER_MINUTE) { w.suppressed++; return d; }
+            w.logged++;
+        }
+        append(Event.DECISION, agent, r == null ? null : r.type(), r == null ? "" : hostOf(r.destination()), d.verdict(), d.reasons());
         return d;
+    }
+
+    /** Writes a summary for every denial window that ended (or all windows when all = true). */
+    private void flushDenials(boolean all) {
+        Instant now = clock.instant();
+        Iterator<Map.Entry<String, DenyWindow>> it = denyWindows.entrySet().iterator();
+        List<Map.Entry<String, DenyWindow>> done = new ArrayList<>();
+        while (it.hasNext()) {
+            Map.Entry<String, DenyWindow> e = it.next();
+            if (all || !now.isBefore(e.getValue().start.plusSeconds(60))) { done.add(e); it.remove(); }
+        }
+        for (Map.Entry<String, DenyWindow> e : done)
+            if (e.getValue().suppressed > 0) append(Event.DENIALS_SUMMARISED, e.getKey().equals("*") ? "" : e.getKey(), null, "", Verdict.DENY, Collections.singletonList("NOT_LOGGED_" + e.getValue().suppressed));
     }
 
     /** Every field is reduced to a fixed character set, so stored and exported logs need no escaping and cannot carry agent text. */
@@ -265,10 +366,9 @@ public final class AgentFirewall {
         List<String> rs = new ArrayList<>();
         for (String x : reasons) rs.add(x.replaceAll("[^A-Z0-9_]", "?"));
         AuditEntry draft = new AuditEntry(clock.instant(), event, safeAgent(agentId), type, safeHost(host), verdict, Collections.unmodifiableList(rs), "");
-        String h = sha(chain + auditBody(draft));
-        chain = h;
-        if (audit.size() >= MAX_AUDIT) anchor = audit.removeFirst().chainHash();
-        audit.addLast(new AuditEntry(draft.time(), event, draft.agentId(), type, draft.destinationHost(), verdict, draft.reasons(), h));
+        log.add(draft);
+        if (SECURITY_EVENTS.contains(event)) security.add(draft);
+        revision++;
     }
     private static String safeAgent(String a) { return a == null ? "" : (a.length() > 255 ? a.substring(0, 255) : a).replaceAll("[^A-Za-z0-9._-]", "?"); }
     private static String safeHost(String h) { return h == null ? "" : (h.length() > 253 ? h.substring(0, 253) : h).replaceAll("[^a-z0-9.:\\[\\]_-]", "?"); }
@@ -277,21 +377,21 @@ public final class AgentFirewall {
 
     // --- Persistence. The app stores these texts encrypted in its private storage; the formats are plain so an export can be read and checked.
 
-    private static final String AUDIT_MAGIC = "AEGIS-AUDIT 1", PENDING_MAGIC = "AEGIS-PENDING 1";
+    private static final String AUDIT_MAGIC = "AEGIS-AUDIT 1", SECURITY_MAGIC = "AEGIS-SECURITY 1", PENDING_MAGIC = "AEGIS-PENDING 1";
     private static final java.util.regex.Pattern HEX64 = java.util.regex.Pattern.compile("[0-9a-f]{64}"), HEX32 = java.util.regex.Pattern.compile("[0-9a-f]{32}");
 
-    /** The audit log as text: a header with the anchor and head hashes, then one tab-separated line per entry. */
-    public synchronized String exportAudit() {
-        StringBuilder b = new StringBuilder(AUDIT_MAGIC).append('\n').append("anchor ").append(anchor).append('\n').append("head ").append(chain).append('\n');
-        for (AuditEntry e : audit)
-            b.append(e.time()).append('\t').append(e.event()).append('\t').append(e.agentId()).append('\t').append(e.type() == null ? "-" : e.type().name()).append('\t')
-             .append(e.destinationHost()).append('\t').append(e.verdict() == null ? "-" : e.verdict().name()).append('\t').append(String.join(",", e.reasons())).append('\t').append(e.chainHash()).append('\n');
-        return b.toString();
-    }
+    /** The audit log as text: a header with the anchor and head hashes, then one tab-separated line per entry. Ended denial windows are summarised first. */
+    public synchronized String exportAudit() { flushDenials(false); return log.export(); }
+
+    /** The security log in the same format, with its own header and chain. */
+    public synchronized String exportSecurityLog() { return security.export(); }
 
     /** Parses exportAudit() text. Returns null for anything malformed; the chain is not checked here (see verifyChain). */
-    public static Restored parseAudit(String text) {
-        if (text == null || !text.startsWith(AUDIT_MAGIC + "\n")) return null;
+    public static Restored parseAudit(String text) { return parse(text, AUDIT_MAGIC, MAX_AUDIT); }
+    public static Restored parseSecurityLog(String text) { return parse(text, SECURITY_MAGIC, MAX_SECURITY); }
+
+    private static Restored parse(String text, String magic, int max) {
+        if (text == null || !text.startsWith(magic + "\n")) return null;
         String[] lines = text.split("\n", -1);
         if (lines.length < 3 || !lines[1].startsWith("anchor ") || !lines[2].startsWith("head ")) return null;
         String a = lines[1].substring(7), h = lines[2].substring(5);
@@ -300,7 +400,7 @@ public final class AgentFirewall {
         for (int i = 3; i < lines.length; i++) {
             if (lines[i].isEmpty()) { if (i == lines.length - 1) break; return null; }
             String[] f = lines[i].split("\t", -1);
-            if (f.length != 8 || out.size() >= MAX_AUDIT || !HEX64.matcher(f[7]).matches()) return null;
+            if (f.length != 8 || out.size() >= max || !HEX64.matcher(f[7]).matches()) return null;
             try {
                 List<String> rs = f[6].isEmpty() ? Collections.emptyList() : Collections.unmodifiableList(Arrays.asList(f[6].split(",", -1)));
                 if (!f[2].equals(safeAgent(f[2])) || !f[4].equals(safeHost(f[4])) || rs.stream().anyMatch(x -> !x.matches("[A-Z0-9_?]+"))) return null;
@@ -316,16 +416,21 @@ public final class AgentFirewall {
      * is not trusted: the new log starts from a hash of the damaged text and its first entry says LOG_DAMAGED, so the
      * break stays visible. Returns true when the saved log was intact.
      */
-    public synchronized boolean restoreAudit(String text) {
-        if (text == null || text.isEmpty()) return true; // nothing saved yet
-        Restored r = parseAudit(text);
-        if (r != null && verifyChain(r.entries(), r.anchor(), r.head())) {
-            audit.clear(); audit.addAll(r.entries()); anchor = r.anchor(); chain = r.head();
-            return true;
-        }
-        audit.clear(); anchor = sha("damaged|" + text); chain = anchor;
-        append(Event.LOG_DAMAGED, "", null, "", null, Collections.singletonList(r == null ? "UNREADABLE" : "CHAIN_BROKEN"));
-        return false;
+    public synchronized boolean restoreAudit(String text) { return restoreLogs(text, null)[0]; }
+    public synchronized boolean restoreSecurityLog(String text) { return restoreLogs(null, text)[1]; }
+
+    /**
+     * Loads both saved logs at start-up (null or empty = nothing saved; that log is left as it is). Both are restored
+     * before any damage note is written, so a note is never overwritten by the other log's restore. A damaged main log
+     * gets LOG_DAMAGED (UNREADABLE / CHAIN_BROKEN), a damaged security log LOG_DAMAGED (SECURITY_LOG_UNREADABLE /
+     * SECURITY_LOG_CHAIN_BROKEN); each note goes to both logs. Returns {main intact, security intact}.
+     */
+    public synchronized boolean[] restoreLogs(String auditText, String securityText) {
+        boolean a = auditText == null || auditText.isEmpty() || log.restore(auditText);
+        boolean s = securityText == null || securityText.isEmpty() || security.restore(securityText);
+        if (!a) append(Event.LOG_DAMAGED, "", null, "", null, Collections.singletonList(parseAudit(auditText) == null ? "UNREADABLE" : "CHAIN_BROKEN"));
+        if (!s) append(Event.LOG_DAMAGED, "", null, "", null, Collections.singletonList(parseSecurityLog(securityText) == null ? "SECURITY_LOG_UNREADABLE" : "SECURITY_LOG_CHAIN_BROKEN"));
+        return new boolean[] {a, s};
     }
 
     /** Open and approved-but-unused approvals, so an approval survives the app being stopped within its five minutes. */

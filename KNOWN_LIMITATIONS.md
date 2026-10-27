@@ -31,6 +31,11 @@
 - Background checks run only while DNS protection is on (no scheduler dependency was added); otherwise changes show when Aegis is opened. A removed grant silently updates the baseline.
 - The risk rating is a fixed rule set (host-tested), not a measurement of how dangerous a given app is.
 
+## Gateway flood resistance (0.8.1-rc12)
+- A sustained flood of allowed requests (up to the 30/min rate limit) still rotates the 500-entry main log after roughly a quarter of an hour; the security log keeps pairings, the person's answers, the kill switch, log damage and rate-limit hits. Unknown agents share one denial budget beyond 64 distinct ids.
+- Debounced saving means up to about 2 seconds of gateway events can be lost if the process dies; the person's own actions are saved at once.
+- The per-UID message budget is held in memory and resets when the gateway process restarts. Never run on a device.
+
 ## Approval tokens for servers (0.8.0-rc11)
 - Never run on a device: Keystore key creation and signing, key export, and token delivery to an agent are unverified.
 - A token proves that Aegis on an enrolled phone allowed the call, not that the phone is uncompromised: code running as Aegis or with root could use the key. No Android key attestation.

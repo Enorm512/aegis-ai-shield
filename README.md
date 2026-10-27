@@ -1,4 +1,4 @@
-# AEGIS AI SHIELD — 0.8.0-rc11 (internal test build, not for public release)
+# AEGIS AI SHIELD — 0.8.1-rc12 (internal test build, not for public release)
 
 An independently implemented Android security app: link, message and APK checks, a signed threat-database mechanism, an experimental on-device language model, an optional DNS-only VPN filter, and a voluntary AI-agent action firewall. Source, tests, Gradle build and APKs are included.
 

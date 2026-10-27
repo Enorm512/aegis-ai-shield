@@ -89,7 +89,8 @@ public final class AgentShieldTests {
 
         // Rotation past MAX_AUDIT survives export/restore
         AgentFirewall big = fw(clock);
-        for (int i = 0; i < AgentFirewall.MAX_AUDIT + 40; i++) { clock.now = clock.now.plusSeconds(3); big.evaluate(new Request("nobody", ActionType.SEND_DATA, "a.example", "", "", Provenance.USER_DIRECT, -1, "")); }
+        big.trustDestination("a.example");
+        for (int i = 0; i < AgentFirewall.MAX_AUDIT + 40; i++) { clock.now = clock.now.plusSeconds(3); big.evaluate(new Request(AGENT, ActionType.SEND_DATA, "a.example", "", "", Provenance.USER_DIRECT, -1, "")); }
         AgentFirewall big2 = fw(clock);
         check(big.auditLog().size() == AgentFirewall.MAX_AUDIT && !big.auditAnchor().equals("genesis") && big2.restoreAudit(big.exportAudit()) && big2.verifyAudit(), "rotated log restores");
 
@@ -160,6 +161,65 @@ public final class AgentShieldTests {
         check(CapabilityWatch.installerOf("com.google.android.packageinstaller", false) == Installer.SIDELOADED, "package installer = sideloaded");
         check(CapabilityWatch.installerOf("com.android.chrome", false) == Installer.OTHER_APP && CapabilityWatch.installerOf(null, false) == Installer.UNKNOWN
             && CapabilityWatch.installerOf("not a package", false) == Installer.UNKNOWN && CapabilityWatch.installerOf(null, true) == Installer.PREINSTALLED, "other, unknown, preinstalled");
+
+        // --- Flood resistance (audit finding P1-1): a paired agent cannot rotate evidence out, and suppressed denials cost no write
+        clock.now = Instant.parse("2026-10-28T08:00:00Z");
+        AgentFirewall fl = fw(clock);
+        fl.notePairing(AGENT, Event.PAIRED, false);
+        fl.trustDestination("ok.example");
+        int flBefore = fl.auditLog().size();
+        long rev = fl.revision();
+        for (int i = 0; i < 5000; i++) fl.evaluate(send("ok.example", "x")); // same instant: 30 allowed, 4,970 rate-limited
+        List<AuditEntry> fll = fl.auditLog();
+        long denied = fll.stream().filter(e -> e.event() == Event.DECISION && e.verdict() == Verdict.DENY).count();
+        long allowed = fll.stream().filter(e -> e.event() == Event.DECISION && e.verdict() == Verdict.ALLOW).count();
+        check(allowed == AgentFirewall.RATE_PER_MINUTE && denied == AgentFirewall.DENIALS_LOGGED_PER_MINUTE, "flood: 30 allowed + 5 denials logged, got " + allowed + "/" + denied);
+        check(fll.size() == flBefore + allowed + denied + 1 && fll.get(0).event() == Event.PAIRED, "pairing entry is still in the main log (nothing rotated out)");
+        check(fll.stream().filter(e -> e.event() == Event.RATE_LIMIT_HIT).count() == 1, "one rate-limit note, not thousands");
+        long revAfter = fl.revision();
+        fl.evaluate(send("ok.example", "x"));
+        check(fl.revision() == revAfter, "a suppressed denial changes nothing that is saved (no disk write needed)");
+        check(revAfter > rev, "logged events advance the revision");
+        clock.now = clock.now.plusSeconds(61);
+        fl.evaluate(send("ok.example", "x")); // new window: ALLOW again, and the old window is summarised first
+        List<AuditEntry> after = fl.auditLog();
+        AuditEntry summary = after.stream().filter(e -> e.event() == Event.DENIALS_SUMMARISED).findFirst().orElse(null);
+        check(summary != null && summary.reasons().equals(List.of("NOT_LOGGED_" + (5000 - 30 - 5 + 1))) && summary.agentId().equals(AGENT), "suppressed denials summarised with their count: " + (summary == null ? "none" : summary.reasons()));
+        check(fl.verifyAudit(), "main chain intact after flood");
+        // Security log keeps what matters even after the main log rotates fully
+        List<AuditEntry> sec = fl.securityLog();
+        check(sec.size() == 2 && sec.get(0).event() == Event.PAIRED && sec.get(1).event() == Event.RATE_LIMIT_HIT && fl.verifySecurityLog(), "security log has pairing + rate-limit hit");
+        for (int m = 0; m < 40; m++) { clock.now = clock.now.plusSeconds(61); for (int i = 0; i < 40; i++) fl.evaluate(send("ok.example", "y")); }
+        check(fl.auditLog().stream().noneMatch(e -> e.event() == Event.PAIRED), "a sustained flood does rotate the main log (bounded) ...");
+        check(fl.securityLog().get(0).event() == Event.PAIRED && fl.verifySecurityLog(), "... but the pairing stays in the security log");
+        check(fl.securityLog().stream().filter(e -> e.event() == Event.RATE_LIMIT_HIT).count() <= 1 + 40 * 61 / 600 + 1, "rate-limit notes throttled to one per 10 minutes per agent");
+        // Many agents cannot multiply the denial budget without bound
+        AgentFirewall many = new AgentFirewall(clock);
+        for (int i = 0; i < 500; i++) for (int j = 0; j < 10; j++) many.evaluate(new Request("agent" + i + ".x", ActionType.SEND_DATA, "a.example", "", "", Provenance.USER_DIRECT, -1, ""));
+        check(many.auditLog().size() <= 64 * AgentFirewall.DENIALS_LOGGED_PER_MINUTE + AgentFirewall.DENIALS_LOGGED_PER_MINUTE, "unknown-agent denials share a bounded budget: " + many.auditLog().size());
+        // Kill switch writes the pending summary before its own entry
+        AgentFirewall ks = fw(clock);
+        for (int i = 0; i < 20; i++) ks.evaluate(new Request("stranger.app", ActionType.SEND_DATA, "a.example", "", "", Provenance.USER_DIRECT, -1, ""));
+        ks.killSwitch();
+        List<AuditEntry> ksl = ks.auditLog();
+        check(ksl.get(ksl.size() - 2).event() == Event.DENIALS_SUMMARISED && ksl.get(ksl.size() - 2).reasons().equals(List.of("NOT_LOGGED_15")) && ksl.get(ksl.size() - 1).event() == Event.KILL_SWITCH_ON, "kill switch flushes the summary first");
+        check(ks.securityLog().get(ks.securityLog().size() - 1).event() == Event.KILL_SWITCH_ON, "kill switch in the security log");
+
+        // --- Security log persistence and damage handling
+        String secText = fl.exportSecurityLog();
+        check(secText.startsWith("AEGIS-SECURITY 1\n") && AgentFirewall.parseAudit(secText) == null && AgentFirewall.parseSecurityLog(fl.exportAudit()) == null, "the two log formats cannot be swapped");
+        AgentFirewall rs = fw(clock);
+        boolean[] both = rs.restoreLogs(fl.exportAudit(), secText);
+        check(both[0] && both[1] && rs.securityLog().equals(fl.securityLog()) && rs.auditLog().equals(fl.auditLog()), "both logs restore exactly");
+        AgentFirewall rd = fw(clock);
+        boolean[] dmg = rd.restoreLogs(fl.exportAudit(), secText.replace("\tPAIRED\t", "\tUNPAIRED\t"));
+        check(dmg[0] && !dmg[1], "edited security log detected, main log fine");
+        check(rd.securityLog().size() == 1 && rd.securityLog().get(0).reasons().equals(List.of("SECURITY_LOG_CHAIN_BROKEN")) && rd.verifySecurityLog(), "security log restarts with a damage note");
+        check(rd.auditLog().get(rd.auditLog().size() - 1).reasons().equals(List.of("SECURITY_LOG_CHAIN_BROKEN")), "damage note also in the main log");
+        AgentFirewall rbad = fw(clock);
+        boolean[] bothBad = rbad.restoreLogs("garbage", "garbage");
+        check(!bothBad[0] && !bothBad[1] && rbad.securityLog().size() == 2 && rbad.auditLog().size() == 2, "both damaged: two notes in each log, neither overwritten");
+        check(rbad.restoreAudit(null) && rbad.restoreSecurityLog(""), "nothing saved is fine");
 
         System.out.println("AgentShieldTests: " + checks + " checks passed");
     }

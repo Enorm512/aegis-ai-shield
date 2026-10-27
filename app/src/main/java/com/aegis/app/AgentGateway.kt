@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.Message
 import android.os.Messenger
 import com.aegis.agentsdk.AegisProtocol
@@ -29,7 +31,9 @@ data class ApprovalItem(val id: String, val agent: String, val type: String, val
                         val broker: String = "")
 
 /** What the activity log screen shows. intactAtLoad = false when the saved log was damaged, edited or unreadable at start-up. */
-data class AuditView(val entries: List<AgentFirewall.AuditEntry> = emptyList(), val head: String = "", val intactAtLoad: Boolean = true, val saveFailed: Boolean = false)
+data class AuditView(val entries: List<AgentFirewall.AuditEntry> = emptyList(), val head: String = "", val intactAtLoad: Boolean = true, val saveFailed: Boolean = false,
+                     /** The separate security log (pairings, your answers, kill switch, damage, rate-limit hits), newest first. */
+                     val security: List<AgentFirewall.AuditEntry> = emptyList())
 
 /** What the pairing dialog shows about the app asking to connect. label is chosen by the app itself, so it is always shown next to the package name. */
 data class AgentAppInfo(val label: String, val icon: Drawable?, val installer: CapabilityWatch.Installer, val drawsOverApps: Boolean,
@@ -71,6 +75,12 @@ object AgentGateway {
     private const val MAX_TRUSTED = 50
     private const val AUDIT_FILE = "agent_audit"
     private const val PENDING_FILE = "agent_pending"
+    private const val SECURITY_FILE = "agent_security"
+    /** Revision of the firewall state last written to disk; -1 = never. Writes are skipped when nothing changed. */
+    @Volatile private var savedRevision = -1L
+    private const val SAVE_DELAY_MS = 2_000L
+    private val saver by lazy { Handler(HandlerThread("aegis-agent-save").apply { start() }.looper) }
+    @Volatile private var saveScheduled = false
     private val lastRequest = HashMap<String, Long>()
     @Volatile private var loaded = false
     @Volatile private var intactAtLoad = true
@@ -96,12 +106,10 @@ object AgentGateway {
         val locked = app.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).getBoolean("lockdown", false)
         firewall.restoreLockdown(locked)
         mutableLockdown.value = locked
-        // The log first, so a damaged one is noted before anything new is added. An unreadable file is reported as damaged, not treated as empty.
-        intactAtLoad = when (val r = SealedStore.read(app, AUDIT_FILE)) {
-            SealedStore.Read.Missing -> true
-            SealedStore.Read.Unreadable -> firewall.restoreAudit("unreadable")
-            is SealedStore.Read.Ok -> firewall.restoreAudit(r.text)
-        }
+        // Both logs first, so damage is noted before anything new is added. An unreadable file is reported as damaged, not treated as empty.
+        fun text(r: SealedStore.Read): String? = when (r) { SealedStore.Read.Missing -> null; SealedStore.Read.Unreadable -> "unreadable"; is SealedStore.Read.Ok -> r.text }
+        val intact = firewall.restoreLogs(text(SealedStore.read(app, AUDIT_FILE)), text(SealedStore.read(app, SECURITY_FILE)))
+        intactAtLoad = intact[0] && intact[1]
         (SealedStore.read(app, PENDING_FILE) as? SealedStore.Read.Ok)?.let { restorePending(it.text) }
         loaded = true
         persist(app)
@@ -125,22 +133,42 @@ object AgentGateway {
         mutableApprovals.value = items.filter { it.id in open }.takeLast(20)
     }
 
-    /** Saves the log and waiting approvals. Called after every change; cheap enough at the firewall's rate limit. */
+    /**
+     * Saves both logs and the waiting approvals, but only when the firewall state changed since the last write
+     * (refused, unpaired and suppressed calls change nothing, so they cost no write). Used for the person's own actions.
+     */
     @Synchronized fun persist(context: Context) {
         val app = context.applicationContext
+        val rev = firewall.revision()
+        if (rev == savedRevision) return
         val items = JSONArray()
         mutableApprovals.value.forEach { i ->
             items.put(JSONObject().put("id", i.id).put("agent", i.agent).put("type", i.type).put("host", i.destinationHost).put("summary", i.summary)
                 .put("reasons", JSONArray(i.reasons)).put("created", i.createdMillis).put("amount", i.amountMinor).put("currency", i.currency)
                 .put("kinds", JSONArray(i.dataKinds)).put("chars", i.payloadChars).put("preview", i.payloadPreview).put("raw", i.destinationRaw).put("broker", i.broker))
         }
-        val ok = SealedStore.write(app, AUDIT_FILE, firewall.exportAudit()) and
+        val auditText = firewall.exportAudit() // may first add a denial summary, which advances the revision
+        val ok = SealedStore.write(app, AUDIT_FILE, auditText) and
+            SealedStore.write(app, SECURITY_FILE, firewall.exportSecurityLog()) and
             SealedStore.write(app, PENDING_FILE, firewall.exportPending() + "--items--\n" + items.toString())
+        if (ok) savedRevision = firewall.revision()
         val log = firewall.auditLog()
-        mutableAudit.value = AuditView(log.takeLast(200).reversed(), firewall.auditHead(), intactAtLoad, !ok)
+        mutableAudit.value = AuditView(log.takeLast(200).reversed(), firewall.auditHead(), intactAtLoad, !ok, firewall.securityLog().reversed())
     }
 
-    fun exportAuditText(): String = firewall.exportAudit()
+    /**
+     * For the gateway's request traffic: coalesces saves to at most one per [SAVE_DELAY_MS] on a background thread,
+     * and does nothing when nothing changed. A burst of requests from one app therefore costs one write, not one per call.
+     */
+    fun persistSoon(context: Context) {
+        if (firewall.revision() == savedRevision || saveScheduled) return
+        saveScheduled = true
+        val app = context.applicationContext
+        saver.postDelayed({ saveScheduled = false; runCatching { persist(app) } }, SAVE_DELAY_MS)
+    }
+
+    /** Both logs as one text file (each with its own header and hash chain). */
+    fun exportAuditText(): String = firewall.exportAudit() + firewall.exportSecurityLog()
 
     fun signerDigest(pm: PackageManager, pkg: String): String? = try {
         @Suppress("DEPRECATION")

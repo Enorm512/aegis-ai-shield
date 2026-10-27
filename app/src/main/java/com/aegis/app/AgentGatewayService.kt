@@ -67,7 +67,22 @@ class AgentGatewayService : Service() {
 
     private fun handle(msg: Message) {
         if (msg.what != MSG_EVALUATE && msg.what != MSG_REDEEM && msg.what != MSG_BROKER) return
-        try { serve(msg) } finally { AgentGateway.persist(this) }
+        // Per-UID budget before any lookup or crypto: an app that floods the gateway is dropped silently instead of costing work.
+        if (!withinBudget(msg.sendingUid)) return
+        try { serve(msg) } finally { AgentGateway.persistSoon(this) }
+    }
+
+    private val budget = HashMap<Int, ArrayDeque<Long>>()
+
+    /** At most [MAX_MESSAGES_PER_MINUTE] messages per calling UID per minute. Runs on the single gateway thread. */
+    private fun withinBudget(uid: Int): Boolean {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (budget.size > 256) budget.clear()
+        val q = budget.getOrPut(uid) { ArrayDeque() }
+        while (q.isNotEmpty() && now - q.first() > 60_000) q.removeFirst()
+        if (q.size >= MAX_MESSAGES_PER_MINUTE) return false
+        q.addLast(now)
+        return true
     }
 
     private fun serve(msg: Message) {
@@ -184,5 +199,7 @@ class AgentGatewayService : Service() {
         const val MSG_BROKER = AegisProtocol.MSG_BROKER
         const val MSG_BROKER_RESULT = AegisProtocol.MSG_BROKER_RESULT
         const val MSG_BROKER_DONE = AegisProtocol.MSG_BROKER_DONE
+        /** Above the firewall's own 30/min so a well-behaved agent never hits it; it bounds work for floods and unpaired callers. */
+        const val MAX_MESSAGES_PER_MINUTE = 120
     }
 }

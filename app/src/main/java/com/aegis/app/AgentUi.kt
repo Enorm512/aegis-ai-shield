@@ -239,6 +239,8 @@ private fun eventText(e: AgentFirewall.AuditEntry, tx: Tx): String {
         Event.UNPAIRED -> tx.t("Removed", "Fjernet")
         Event.KILL_SWITCH_ON -> tx.t("Emergency stop turned on", "Nødstopp slått på")
         Event.KILL_SWITCH_OFF -> tx.t("Emergency stop turned off", "Nødstopp slått av")
+        Event.DENIALS_SUMMARISED -> tx.t("More refusals, not listed one by one", "Flere avslag, ikke listet enkeltvis") + " (" + e.reasons().joinToString().removePrefix("NOT_LOGGED_") + ")"
+        Event.RATE_LIMIT_HIT -> tx.t("Sent too many requests and was slowed down", "Sendte for mange forespørsler og ble bremset")
         Event.TOKEN_ISSUED -> tx.t("Signed a token for the server", "Signerte et bevis for tjeneren") + ": $what$to"
         Event.BROKER_PERFORMED -> tx.t("Aegis carried out", "Aegis utførte") + ": $what$to"
         Event.BROKER_FAILED -> tx.t("Aegis did not carry out", "Aegis utførte ikke") + ": $what$to"
@@ -315,6 +317,13 @@ fun AgentLogCard(audit: AuditView, tx: Tx, dark: Boolean, context: Context) {
                 }
             }
             if (audit.entries.size > 8) TextButton(onClick = { showAll = !showAll }) { Text(if (showAll) tx.t("Show fewer", "Vis færre") else tx.t("Show more", "Vis flere")) }
+            if (audit.security.isNotEmpty()) {
+                Text(tx.t("Security events (kept separately; request traffic cannot push these out)", "Sikkerhetshendelser (lagres separat; forespørsler kan ikke skyve dem ut)"), style = MaterialTheme.typography.titleSmall)
+                audit.security.take(if (showAll) 50 else 5).forEach { e ->
+                    val t = e.time().toEpochMilli()
+                    Text(eventText(e, tx) + " · " + DateFormat.getMediumDateFormat(context).format(t) + " " + DateFormat.getTimeFormat(context).format(t) + (if (e.agentId().isNotEmpty()) " · " + e.agentId() else ""), style = MaterialTheme.typography.labelSmall)
+                }
+            }
             if (audit.head.length >= 16) Text(tx.t("Log fingerprint: ", "Loggens fingeravtrykk: ") + audit.head.take(16).chunked(4).joinToString(" "), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelSmall)
             Text(tx.t("Write the fingerprint down or export the log now and then: if someone with access to the phone rewrote the whole log, an older copy would not match.", "Skriv ned fingeravtrykket eller eksporter loggen av og til: hvis noen med tilgang til telefonen skrev om hele loggen, ville en eldre kopi ikke stemme."),
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

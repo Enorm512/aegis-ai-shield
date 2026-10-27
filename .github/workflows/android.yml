@@ -21,9 +21,12 @@ jobs:
       - run: bash core/run-tests.sh
       - run: java tools/IconPreview.java check app/src/main/res
       - run: |
-          mkdir -p /tmp/core-classes && javac -encoding UTF-8 --release 17 -d /tmp/core-classes core/src/main/java/com/aegis/core/*.java
+          mkdir -p /tmp/core-classes /tmp/sdk-classes && javac -encoding UTF-8 --release 17 -d /tmp/core-classes core/src/main/java/com/aegis/core/*.java
+          javac -encoding UTF-8 --release 17 -d /tmp/sdk-classes agent-sdk/src/main/java/com/aegis/agentsdk/*.java
           python3 tools/check_android_api.py /tmp/core-classes "$ANDROID_HOME/platforms/android-36/data/api-versions.xml" 26
-      - run: gradle :core:check :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+          python3 tools/check_android_api.py /tmp/sdk-classes "$ANDROID_HOME/platforms/android-36/data/api-versions.xml" 26
+      # Host tests of every pure-Java module (core and the agent SDK), then the Android modules: Aegis, the SDK client and the sample agent.
+      - run: gradle :core:check :agent-sdk:check :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest :agent-sdk-android:lintDebug :sample-agent:lintDebug :sample-agent:assembleDebug
       # Release gate: builds the unsigned release APK and refuses it if it trusts the published debug key, is not 16 KB aligned, or uses the debug package id.
       - run: gradle :app:lintRelease :app:assembleRelease
       - run: python3 tools/check_release_apk.py app/build/outputs/apk/release/app-release-unsigned.apk "$ANDROID_HOME/build-tools/36.0.0"
@@ -33,6 +36,7 @@ jobs:
           path: |
             app/build/outputs/apk/
             app/build/reports/
+            sample-agent/build/outputs/apk/
   device-smoke:
     runs-on: ubuntu-latest
     steps:

@@ -152,3 +152,12 @@ Version 0.8.0-rc11 (versionCode 17). Item 2.2 from REVIEW_AGENT_SHIELD.md.
 - Aegis: per-phone EC P-256 signing key in the Android Keystore (`ApprovalSigner`); tokens on ALLOW (`POLICY_ALLOW`) and on granted redemption (`USER_APPROVED`) when the call has a destination host; audit event `TOKEN_ISSUED`. Protection → Proof for servers: key fingerprint, export public key (PEM), replace key.
 - SDK client: `Result.token`; `redeem()` now returns `Redeemed(granted, token)`. Sample agent 0.2.0-demo shows the token.
 - APPROVAL_TOKENS.md. Verified: host tests, Gradle builds, lint 0 errors in all Android modules, release/privacy/API gates. NOT verified: anything on a device.
+
+## 0.8.1-rc12 stage 1 security foundation (2026-10-28)
+Version 0.8.1-rc12 (versionCode 18). From the 2026-10-27 security audit, stage 1.
+- Project put under git (baseline commit = the audited 0.8.0-rc11 tree). `.gitattributes` keeps LF endings and marks signed fixtures and images binary; third-party datasets and experimental models are not tracked.
+- Fix (audit P1-1, log eviction): `AgentFirewall` logs at most 5 denials per agent per minute and summarises the rest (`DENIALS_SUMMARISED`); new separate, hash-chained **security log** (`securityLog`, `exportSecurityLog`, `restoreLogs`) for pairings, the person's answers, kill switch, log damage and throttled `RATE_LIMIT_HIT`; both logs saved encrypted and shown in the activity-log card; export contains both.
+- Fix (audit P1-2, write amplification): `AgentFirewall.revision()`; `AgentGateway.persist` skips the write when nothing changed and `persistSoon` coalesces gateway saves to one per 2 s; `AgentGatewayService` drops callers above 120 messages/min per UID before any lookup.
+- CI and `core/run-tests.sh` now run the agent-SDK host tests, build and lint the SDK client and sample agent, and API-scan the SDK classes.
+- TEST_RESULTS.md and ARCHITECTURE.md regenerated from the current tree and today's results.
+- AgentShieldTests 91 checks (21 new). Verified: host tests, Gradle debug builds, lint 0 errors, privacy and API checks. NOT verified: anything on a device; CI has not run (no remote).

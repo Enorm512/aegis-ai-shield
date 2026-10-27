@@ -1,20 +1,60 @@
-# Observed validation — 25 October 2026
+# Observed validation — 28 October 2026, build 0.8.1-rc12
 
-## Passed in this session
-- `bash core/run-tests.sh`: 10,075 core assertions, including 5,000 fixed-seed fuzz cases for each of URL and message analysis.
-- Same runner: 325 archive checks, including 300 seeded malformed-byte mutation cases. Archive rejections are allowed; uncaught failures are not.
-- `python3 tools/check_privacy.py`: permission-free manifest, backup/cleartext disabled, no service, XML parsing and 20 Norwegian finding-code mappings.
-- Host CLI compiled and executed: https://bankid.no/login -> NO_KNOWN_WARNING_SIGNS; synthetic Norwegian BankID/password urgency request -> STRONG_INDICATORS.
-- Gradle wrapper generation succeeded from official Gradle8.11.1 distribution. Distribution SHA256 matched the official checksum.
+Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
 
-Compiler: `java -m jdk.compiler/com.sun.tools.javac.Main`, OpenJDK17.0.20. Raw successful suite output is in reports/host-tests.txt and reports/privacy-static.txt.
+## Environment
+Windows 11, OpenJDK 17, Gradle 8.11.1 (wrapper), Android Gradle Plugin 8.9.2, Android SDK platform 36 / build-tools 36.0.0. Run from the developer's terminal. **No Android device or emulator was used.** CI (`.github/workflows/android.yml`) has **not** run yet: the project was put under git on 2026-10-28 and has no remote.
 
-## Failed/blocked
-- Full Gradle project configuration: com.android.application8.9.2 could not be resolved from configured repositories. An offline assembleDebug attempt also failed because this plugin was not cached; see reports/android-build-attempt.txt.
-- Isolated Gradle core check: host JDK lacks javac launcher; Gradle reports no JAVA_COMPILER capability. Direct compiler-module tests above succeeded and are not a Gradle build pass.
-- SDK Manager installation skipped platform35/build-tools35/platform-tools because licence was not accepted. Authorization requested before accepting licence and installing.
+## Passed
+`gradlew :core:check :agent-sdk:check :app:assembleDebug :app:lintDebug :app:assembleDebugAndroidTest :agent-sdk-android:lintDebug :sample-agent:assembleDebug :sample-agent:lintDebug` — BUILD SUCCESSFUL.
 
-## Not executed
-Android Kotlin compilation, lint, APK generation/signing, six instrumentation tests, emulator/physical device runs, UI rendering/screenshot verification, real APK parser integration, packet capture, battery tests, independent accuracy assessment, external audit and remote CI. **No installable APK is included.**
+| Host test class (module) | Checks |
+|---|---|
+| CoreTests (core) | 10,075 assertions, incl. 5,000 fixed-seed fuzz cases per analyser |
+| ArchiveTests | 325 |
+| ThreatIntelTests | 114 |
+| AiTests | 7,219 (host measurement: classify ~62 µs/message) |
+| DnsTests | 124 (host measurement: blocked-query path ~1.4 µs/query) |
+| ManifestTests | 33,975 |
+| LookalikeTests | 57 |
+| AgentFirewallTests | 4,533 |
+| ResultTests | 61 |
+| VerdictTests | 63 |
+| FirewallReviewTests | 106 |
+| SpotTests | 91 |
+| DataToolsTests | 46 |
+| CapabilityTests | 26 |
+| CanaryTests | 2,036 |
+| AgentShieldTests | 91 (21 new: denial coalescing, security log, write-skipping revision) |
+| BrokerTests | 550 |
+| AgentSdkTests (agent-sdk) | 33 |
+| TokenTests (agent-sdk) | 50 |
 
-No measured recall, precision or false-positive rate is available. Synthetic cases were written during implementation and are not an independent holdout. No production-readiness claim.
+- Lint, 0 errors in every module: app 27 warnings, agent-sdk-android 1, sample-agent 7.
+- Static checks: `tools/check_privacy.py` PASS; `tools/check_android_api.py` PASS for core (109 classes) and agent-sdk (13 classes).
+- Built but **not executed:** the instrumented-test APK (`assembleDebugAndroidTest`) compiles.
+- Release-gate state: the last signed release run (0.8.0-rc11, 2026-10-27) passed `check_release_apk.py` and apksigner. The release build was not repeated for 0.8.1-rc12.
+
+Timing figures are single host-JVM runs on a development PC, not phone measurements.
+
+## Not executed (nothing below has ever run)
+- Any code on an Android device or emulator:
+  - the VPN / DNS protection
+  - the power watch
+  - tripwire planting
+  - the agent gateway, broker and approval tokens
+  - Keystore keys and `SealedStore`
+  - the kill switch
+  - the UI
+- The seven instrumented tests in `DashboardSmokeTest`.
+- CI on any hosted runner.
+- Reboot, process death, Always-on VPN and Private DNS behaviour.
+- Battery, memory, CPU and startup measurements.
+- OEM compatibility (including Samsung One UI).
+- Packet capture.
+- An independent accuracy evaluation or an external security audit.
+
+## Accuracy figures that exist
+Only those in AI_EVALUATION.md: on a locked 95-message reviewer set, rules alone 4/41 scam recall with 0/54 false positives; the hybrid with the optional classifier 24/41 with 3/54. These are small, single-author sets, not an independent benchmark.
+
+No production-readiness claim.

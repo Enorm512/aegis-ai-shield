@@ -22,3 +22,9 @@ trap 'rm -rf "$build_dir"' EXIT
 "$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.CanaryTests
 "$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.AgentShieldTests
 "$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.BrokerTests
+# Agent SDK (pure Java). Its tests also use core, to check the shared names and limits agree.
+sdk_dir="$build_dir/sdk"
+mkdir -p "$sdk_dir"
+"$java_cmd" -m jdk.compiler/com.sun.tools.javac.Main --release 17 -encoding UTF-8 -cp "$build_dir" -d "$sdk_dir" ../agent-sdk/src/main/java/com/aegis/agentsdk/*.java ../agent-sdk/src/test/java/com/aegis/agentsdk/*.java
+"$java_cmd" -Dfile.encoding=UTF-8 -cp "$sdk_dir:$build_dir" com.aegis.agentsdk.AgentSdkTests
+"$java_cmd" -Dfile.encoding=UTF-8 -cp "$sdk_dir:$build_dir" com.aegis.agentsdk.TokenTests

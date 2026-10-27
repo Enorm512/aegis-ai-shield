@@ -161,7 +161,9 @@ public final class AgentFirewallTests {
 
         // Audit log: bounded, hash-chained, no payloads or secrets
         AgentFirewall a = fw(clock);
-        for (int i = 0; i < 700; i++) { clock.now = clock.now.plusSeconds(3); a.evaluate(req(ActionType.SEND_DATA, "https://api.example.org/x?token=abc", "n" + i, "password = supersecret123", Provenance.USER_DIRECT)); }
+        // Each request asks (secret to a trusted host) and is then denied by the person, so approval slots never run out and
+        // the log fills with logged entries (denials beyond a per-minute budget are summarised, not logged one by one).
+        for (int i = 0; i < 700; i++) { clock.now = clock.now.plusSeconds(3); Decision ad = a.evaluate(req(ActionType.SEND_DATA, "https://api.example.org/x?token=abc", "n" + i, "password = supersecret123", Provenance.USER_DIRECT)); if (ad.approvalId() != null) a.resolve(ad.approvalId(), false); }
         List<AuditEntry> log = a.auditLog();
         check(log.size() == AgentFirewall.MAX_AUDIT && a.verifyAudit(), "audit bounded and chain verifies after rotation");
         check(log.stream().allMatch(e -> e.destinationHost().equals("api.example.org")), "audit stores host only, not paths or query strings");
