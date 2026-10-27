@@ -161,3 +161,8 @@ Version 0.8.1-rc12 (versionCode 18). From the 2026-10-27 security audit, stage 1
 - CI and `core/run-tests.sh` now run the agent-SDK host tests, build and lint the SDK client and sample agent, and API-scan the SDK classes.
 - TEST_RESULTS.md and ARCHITECTURE.md regenerated from the current tree and today's results.
 - AgentShieldTests 91 checks (21 new). Verified: host tests, Gradle debug builds, lint 0 errors, privacy and API checks. NOT verified: anything on a device; CI has not run (no remote).
+
+## 0.8.2-rc13 first emulator run fixes (2026-10-28)
+Version 0.8.2-rc13 (versionCode 19). Found by the first instrumented run on an Android 15 emulator in CI (7 tests: 3 passed, 4 failed; no crash or ANR).
+- Fix: text shared into Aegis while a check was still running was shown but never checked (`analyze()` returned early while busy, and the earlier result was discarded as stale). `AegisViewModel.shared()` now cancels the running check or APK inspection and starts a new one.
+- Tests: three `DashboardSmokeTest` selectors were ambiguous ("Check" matched both the bottom-bar tab and the Check button; "Review" matched both the agent banner and the Home attention item). They now pick the Check button by its button role, and the first "Review" (both open the same dialog).

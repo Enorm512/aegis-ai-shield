@@ -1,6 +1,8 @@
 package com.aegis.app
 
 import android.content.Intent
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.lifecycle.ViewModelProvider
@@ -26,6 +28,8 @@ class DashboardSmokeTest {
         compose.waitUntil(5_000) { compose.onAllNodesWithText(text, ignoreCase = true).fetchSemanticsNodes().isNotEmpty() }
     }
     private fun openCheck() { compose.onNodeWithText(t("Check", "Sjekk")).performClick() }
+    /** The Check screen's own button. "Check" alone also matches the bottom-bar tab of the same name. */
+    private fun checkButton() = compose.onNode(hasText(t("Check", "Sjekk")) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
 
     @Test fun homeRendersWithStatusAndNavigation() {
         ActivityScenario.launch<MainActivity>(intent()).use {
@@ -39,7 +43,7 @@ class DashboardSmokeTest {
         ActivityScenario.launch<MainActivity>(intent()).use {
             openCheck()
             compose.onNode(hasSetTextAction()).performTextInput("https://example.com")
-            compose.onNodeWithText(t("Check", "Sjekk")).performClick()
+            checkButton().performClick()
             waitFor(t("No known warning signs", "Ingen kjente faresignaler"))
             compose.onNodeWithText(t("Nothing matched the rules and lists on this device.", "Ingenting traff reglene og listene på denne enheten."), substring = true).assertExists()
         }
@@ -50,7 +54,7 @@ class DashboardSmokeTest {
             openCheck()
             compose.onNode(hasSetTextAction()).performTextInput("https://")
             compose.onNodeWithText(t("Link", "Lenke")).performClick()
-            compose.onNodeWithText(t("Check", "Sjekk"), useUnmergedTree = true).performClick()
+            checkButton().performClick()
             waitFor(t("Couldn't assess this link", "Kunne ikke vurdere lenken"))
         }
     }
@@ -92,7 +96,8 @@ class DashboardSmokeTest {
         ActivityScenario.launch<MainActivity>(intent()).use {
             AgentGateway.addApproval(ApprovalItem("a".repeat(32), "com.example.assistant", "INSTALL_APP", "store.example.org", "Install calculator", listOf("INSTALL_APP"), System.currentTimeMillis()))
             waitFor(t("An AI agent is waiting for your decision", "En KI-agent venter på avgjørelsen din"))
-            compose.onNodeWithText(t("Review", "Se på")).performClick()
+            // Both the top banner and the Home attention item offer "Review"; either opens the same review dialog.
+            compose.onAllNodesWithText(t("Review", "Se på")).onFirst().performClick()
             compose.onNodeWithText(t("Deny", "Nekt")).assertIsDisplayed().performClick()
             compose.waitUntil(5_000) { compose.onAllNodesWithText(t("An AI agent is waiting for your decision", "En KI-agent venter på avgjørelsen din")).fetchSemanticsNodes().isEmpty() }
             assertTrue(AgentGateway.approvals.value.isEmpty())

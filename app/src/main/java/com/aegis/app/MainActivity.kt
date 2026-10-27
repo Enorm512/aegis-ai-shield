@@ -23,6 +23,7 @@ import com.aegis.core.ThreatBundleVerifier
 import com.aegis.core.ThreatChecks
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +57,8 @@ data class UiState(
 class AegisViewModel(application: android.app.Application) : AndroidViewModel(application) {
     init { application.cacheDir.listFiles()?.filter { it.name.startsWith("apk-review-") && it.extension == "apk" }?.forEach { it.delete() } }
     private var revision = 0L
+    /** The running link/message check or APK inspection, so newly shared text can replace it. Main thread only. */
+    private var work: Job? = null
     private val mutable = MutableStateFlow(UiState())
     val state = mutable.asStateFlow()
 
@@ -67,10 +70,15 @@ class AegisViewModel(application: android.app.Application) : AndroidViewModel(ap
     fun clear() { if (!mutable.value.busy) { revision++; mutable.value = mutable.value.copy(input = "", result = null, shared = false, inputTooLong = false, kindOverride = null) } }
     fun toggleAi() { revision++; mutable.value = mutable.value.copy(aiEnabled = !mutable.value.aiEnabled, result = null) }
 
-    /** Text arriving from another app is checked straight away: the analysis is local, in memory, and opens nothing. */
+    /**
+     * Text arriving from another app is checked straight away: the analysis is local, in memory, and opens nothing.
+     * A check still running for earlier input is cancelled first; before, the new text was shown but never checked.
+     */
     fun shared(value: String) {
         revision++
-        mutable.value = mutable.value.copy(input = value.take(MAX_TEXT), screen = Screens.CHECK, result = null, shared = true, inputTooLong = value.length > MAX_TEXT, kindOverride = null)
+        work?.cancel()
+        work = null
+        mutable.value = mutable.value.copy(input = value.take(MAX_TEXT), screen = Screens.CHECK, result = null, shared = true, inputTooLong = value.length > MAX_TEXT, kindOverride = null, busy = false)
         if (value.isNotBlank()) analyze()
     }
 
@@ -122,7 +130,7 @@ class AegisViewModel(application: android.app.Application) : AndroidViewModel(ap
         val kind = snapshot.kindOverride ?: InputKind.detect(snapshot.input)
         val subject = if (kind == InputKind.Kind.LINK) Subject.LINK else Subject.MESSAGE
         mutable.value = snapshot.copy(busy = true, result = null)
-        viewModelScope.launch {
+        work = viewModelScope.launch {
             val result = withContext(Dispatchers.Default) {
                 try {
                     val analysis = if (subject == Subject.LINK) ThreatChecks.url(snapshot.input, ThreatIntel.get(getApplication()))
@@ -142,7 +150,7 @@ class AegisViewModel(application: android.app.Application) : AndroidViewModel(ap
         revision++
         val requestRevision = revision
         mutable.value = mutable.value.copy(busy = true, result = null, screen = Screens.CHECK)
-        viewModelScope.launch {
+        work = viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 var temporary: File? = null
                 try {
