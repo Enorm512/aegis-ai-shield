@@ -55,4 +55,13 @@ jobs:
         with:
           api-level: 35
           arch: x86_64
-          script: gradle connectedDebugAndroidTest
+          # On failure keep the device log (crash stack traces) for the artifact below.
+          script: gradle connectedDebugAndroidTest || { adb logcat -d > /tmp/logcat.txt; exit 1; }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: device-smoke-failure
+          path: |
+            /tmp/logcat.txt
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
