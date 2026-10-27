@@ -176,7 +176,10 @@ private fun HomeScreen(s: UiState, vm: AegisViewModel, tx: Tx, stats: State<Prot
     val off = MaterialTheme.colorScheme.outline
     val lockdown by AgentGateway.lockdown.collectAsStateWithLifecycle()
     val audit by AgentGateway.audit.collectAsStateWithLifecycle()
+    val incidents by Signals.incidents.collectAsStateWithLifecycle()
     val items = buildList {
+        incidents.forEach { i -> add(Attention(Signals.ruleText(i.rule(), tx.no), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) }) }
+        if (powers.appChanges.isNotEmpty()) add(Attention(if (powers.appChanges.size == 1) tx.t("An app was added or replaced and should be checked.", "En app er lagt til eller byttet ut og bør sjekkes.") else tx.t("${powers.appChanges.size} app changes should be checked.", "${powers.appChanges.size} appendringer bør sjekkes."), tx.t("Review", "Se på")) { vm.go(Screens.PROTECT) })
         if (lockdown) add(Attention(tx.t("Emergency stop for AI agents is on: every agent request is refused.", "Nødstopp for KI-agenter er på: alle forespørsler fra agenter nektes."), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) })
         if (!audit.intactAtLoad) add(Attention(tx.t("The saved AI agent log was damaged or changed.", "Den lagrede KI-agentloggen var skadet eller endret."), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) })
         if (waiting > 0) add(Attention(if (waiting == 1) tx.t("An AI agent is waiting for your decision.", "En KI-agent venter på avgjørelsen din.") else tx.t("$waiting AI agent requests are waiting for your decision.", "$waiting forespørsler fra KI-agenter venter på deg."), tx.t("Review", "Se på"), onReview))
@@ -312,6 +315,7 @@ private fun ProtectScreen(s: UiState, tx: Tx, stats: State<ProtectionStats>, run
     val blocked = remember(listVersion) { Protection.lists.blocked().toList() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ScreenTitle(tx.t("Protection", "Beskyttelse"))
+        LinkedWarningsCard(powers, tx, s.dark, context)
         PowersCard(powers, tx, s.dark, context)
         TripwireCard(tripwires, running, tx, s.dark, context)
         val lockdown by AgentGateway.lockdown.collectAsStateWithLifecycle()

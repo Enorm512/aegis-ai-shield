@@ -1,0 +1,6 @@
+# Production feed sources (FeedBuilder manifest): id|licence|category|confidence|path|attribution
+# Paths are relative to this file. The lists are NOT in the repository: download each yourself after reading its terms,
+# into tools/feed/lists/ (ignored by git). FeedBuilder never goes online.
+# Both start at SUSPICIOUS (warn only in DNS protection) until their false-positive rate on real use is known.
+phishdb|MIT|PHISHING|SUSPICIOUS|feed/lists/phishing-domains-ACTIVE.txt|Phishing.Database, https://github.com/Phishing-Database/Phishing.Database (MIT)
+blp-scam|Unlicense|SCAM|SUSPICIOUS|feed/lists/blp-scam.txt|The Block List Project, https://github.com/blocklistproject/Lists (Unlicense)

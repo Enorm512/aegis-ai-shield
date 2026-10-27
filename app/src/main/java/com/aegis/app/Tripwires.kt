@@ -129,7 +129,10 @@ object Tripwires {
                 testResult = if (isTest) "ok" else mutable.value.testResult)
             save(context)
         }
-        if (!isTest) runCatching { alert(context, token.kind()) }
+        if (!isTest) {
+            runCatching { alert(context, token.kind()) }
+            Signals.record(context, com.aegis.core.Correlator.Kind.TRIPWIRE, null, token.kind().name)
+        }
     }
 
     /**

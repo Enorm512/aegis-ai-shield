@@ -12,3 +12,10 @@ keystore.properties
 # Third-party datasets and experimental models built from them: re-downloadable (see ml/external/README.md), never shipped.
 ml/external/raw/
 ml/external/processed/
+
+# Threat feed inputs and outputs (download lists yourself; signed bundles are published, not committed)
+tools/feed/
+# Never commit a signing key; the two debug test keys are public on purpose.
+*.private
+!tools/debug-test-key/debug.private
+!app/src/androidTest/assets/debug-threat-key.private

@@ -30,6 +30,35 @@ fun displayName(p: PowerState, pkg: String, tx: Tx): String =
     if (pkg == PowerWatch.UNKNOWN) tx.t("A VPN app (Android does not say which)", "En VPN-app (Android oppgir ikke hvilken)")
     else p.labels[pkg]?.takeIf { it.isNotBlank() && it != pkg }?.let { "$it ($pkg)" } ?: pkg
 
+/** Incidents linked from several watches. Hidden when there are none. */
+@Composable
+fun LinkedWarningsCard(p: PowerState, tx: Tx, dark: Boolean, context: Context) {
+    val incidents by Signals.incidents.collectAsState()
+    if (incidents.isEmpty()) return
+    val style = levelStyle(Level.STRONG, dark)
+    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = style.container.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow))) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            SectionTitle(tx.t("Warnings that fit together", "Varsler som henger sammen"), icon = R.drawable.ic_lock)
+            incidents.take(5).forEach { i ->
+                HorizontalDivider()
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Pill(riskLabel(i.risk(), tx), levelStyle(riskLevel(i.risk()), dark).accent)
+                    Text(Signals.ruleText(i.rule(), tx.no), style = MaterialTheme.typography.bodyMedium)
+                    i.packages().forEach { pkg ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(displayName(p, pkg, tx), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                            TextButton(onClick = { PowerWatch.openAppDetails(context, pkg) }) { Text(tx.t("App info", "Appinfo")) }
+                        }
+                    }
+                }
+            }
+            Text(tx.t("Each warning alone can be harmless; together they match a known attack pattern. Aegis does not remove anything itself.",
+                "Hvert varsel alene kan være ufarlig; sammen ligner de et kjent angrepsmønster. Aegis fjerner ingenting selv."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick = { Signals.dismiss(context) }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(tx.t("I've checked these", "Jeg har sjekket disse")) }
+        }
+    }
+}
+
 /** "Who can control or read this phone": new grants first, then every holder by risk, each with a link to the system page. */
 @Composable
 fun PowersCard(p: PowerState, tx: Tx, dark: Boolean, context: Context) {
@@ -62,7 +91,31 @@ fun PowersCard(p: PowerState, tx: Tx, dark: Boolean, context: Context) {
                         Button(onClick = { PowerWatch.markReviewed(context) }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(tx.t("I recognise these", "Jeg kjenner igjen disse")) }
                     }
                 }
-            } else if (p.firstLook) Text(tx.t("First check: this list is your starting point. Aegis will point out any app that gets new power from now on.", "Første sjekk: denne listen er utgangspunktet. Aegis sier fra om apper som får ny makt fra nå av."), style = MaterialTheme.typography.bodySmall)
+            }
+            if (p.appChanges.isNotEmpty()) {
+                Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = warnStyle.container.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow))) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(tx.t("App changes to check", "Appendringer å sjekke"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        p.appChanges.take(10).forEach { c ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(displayName(p, c.packageName(), tx), Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                        Pill(riskLabel(c.risk(), tx), levelStyle(riskLevel(c.risk()), dark).accent)
+                                    }
+                                    Text(PowerWatch.appChangeTitle(c.kind(), tx.no), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                    c.reasons().mapNotNull { PowerWatch.appReasonText(it, tx.no) }.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+                                }
+                                TextButton(onClick = { PowerWatch.openAppDetails(context, c.packageName()) }) { Text(tx.t("App info", "Appinfo")) }
+                            }
+                        }
+                        Text(tx.t("Only apps Android lets Aegis see are checked, mainly ones offering these powers. If you don't recognise a change, remove the app from App info.",
+                            "Bare apper Android lar Aegis se blir sjekket, hovedsakelig de som tilbyr disse tilgangene. Kjenner du ikke igjen endringen, fjern appen under Appinfo."), style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = { PowerWatch.markReviewed(context) }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(tx.t("I recognise these", "Jeg kjenner igjen disse")) }
+                    }
+                }
+            }
+            if (p.alerts.isEmpty() && p.firstLook) Text(tx.t("First check: this list is your starting point. Aegis will point out any app that gets new power from now on.", "Første sjekk: denne listen er utgangspunktet. Aegis sier fra om apper som får ny makt fra nå av."), style = MaterialTheme.typography.bodySmall)
 
             if (p.apps.isEmpty()) Text(tx.t("No app holds these powers, as far as Android lets Aegis see.", "Ingen apper har disse tilgangene, så langt Android lar Aegis se."), style = MaterialTheme.typography.bodySmall)
             p.apps.take(30).forEach { a ->

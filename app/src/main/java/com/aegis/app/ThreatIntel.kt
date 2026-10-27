@@ -6,8 +6,13 @@ import com.aegis.core.ThreatBundleVerifier
 import com.aegis.core.ThreatStore
 import java.io.File
 
-/** Local signed threat database. Trusted keys come from assets; none are shipped yet, so nothing can be imported. */
+/**
+ * Local signed threat database. Trusted keys come from assets; the release build ships none yet, so nothing can be
+ * installed there. A signed bundle shipped in the APK as assets/threat_seed.bundle is installed on first use (and after
+ * an app update that carries a newer one), through the same verification, rollback floor and expiry rules as an import.
+ */
 object ThreatIntel {
+    private const val SEED_ASSET = "threat_seed.bundle"
     class Holder(val store: ThreatStore, val anchorsPresent: Boolean, val provider: ReputationProvider)
 
     @Volatile private var holder: Holder? = null
@@ -23,9 +28,20 @@ object ThreatIntel {
                 }
             }
             val store = ThreatStore(File(app.filesDir, "threatdb"), anchors, java.time.Clock.systemUTC())
+            if (!anchors.isEmpty) runCatching { app.assets.open(SEED_ASSET).use { it.readBytes() } }.getOrNull()?.let { installSeed(store, it) }
             Holder(store, !anchors.isEmpty, ReputationProvider.LocalDatabase { store.current() }).also { holder = it }
         }
     }
+
+    /**
+     * Installs a bundled seed unless the installed database is already as new. Returns "OK", "NOT_NEWER" or the
+     * verifier's rejection reason; a rejected seed never replaces or clears what is installed.
+     */
+    fun installSeed(store: ThreatStore, bundle: ByteArray): String = try {
+        store.install(bundle); "OK"
+    } catch (e: ThreatBundleVerifier.BundleException) {
+        if (e.reason == ThreatBundleVerifier.BundleException.Reason.ROLLBACK) "NOT_NEWER" else e.reason.name
+    } catch (_: java.io.IOException) { "IO" }
 
     fun get(context: Context): ReputationProvider = holder(context).provider
 }

@@ -77,6 +77,20 @@ val capabilityRegression by tasks.registering(JavaExec::class) {
     jvmArgs("-Dfile.encoding=UTF-8")
     workingDir = projectDir
 }
+val correlatorRegression by tasks.registering(JavaExec::class) {
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("com.aegis.core.CorrelatorTests")
+    jvmArgs("-Dfile.encoding=UTF-8")
+    workingDir = projectDir
+}
+val appWatchRegression by tasks.registering(JavaExec::class) {
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("com.aegis.core.AppWatchTests")
+    jvmArgs("-Dfile.encoding=UTF-8")
+    workingDir = projectDir
+}
 val dataToolsRegression by tasks.registering(JavaExec::class) {
     dependsOn(tasks.testClasses)
     classpath = sourceSets.test.get().runtimeClasspath
@@ -112,4 +126,4 @@ val brokerRegression by tasks.registering(JavaExec::class) {
     jvmArgs("-Dfile.encoding=UTF-8")
     workingDir = projectDir
 }
-tasks.check { dependsOn(brokerRegression, agentShieldRegression, canaryRegression, capabilityRegression, dataToolsRegression, spotRegression, verdictRegression, firewallReviewRegression, resultRegression, coreRegression, archiveRegression, threatIntelRegression, aiRegression, dnsRegression, manifestRegression, lookalikeRegression, agentRegression) }
+tasks.check { dependsOn(correlatorRegression, appWatchRegression, brokerRegression, agentShieldRegression, canaryRegression, capabilityRegression, dataToolsRegression, spotRegression, verdictRegression, firewallReviewRegression, resultRegression, coreRegression, archiveRegression, threatIntelRegression, aiRegression, dnsRegression, manifestRegression, lookalikeRegression, agentRegression) }

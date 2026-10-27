@@ -19,6 +19,7 @@ import com.aegis.core.AgentFirewall.Provenance
 import com.aegis.core.AgentFirewall.Verdict
 import com.aegis.core.Analysis
 import com.aegis.core.CapabilityBroker
+import com.aegis.core.Correlator
 import com.aegis.core.ThreatChecks
 
 /**
@@ -106,7 +107,10 @@ class AgentGatewayService : Service() {
                 if (AgentGateway.pairings.value.size > before) AgentNotifier.notifyWaiting(this)
                 return reply(to, resultWhat, result(AegisProtocol.VERDICT_NOT_PAIRED, listOf("PAIRING_REQUIRED")), requestId)
             }
-            AgentGateway.Status.SIGNATURE_CHANGED -> return refuse("SIGNATURE_CHANGED")
+            AgentGateway.Status.SIGNATURE_CHANGED -> {
+                Signals.record(this, Correlator.Kind.AGENT_SIGNATURE_CHANGED, pkg, "")
+                return refuse("SIGNATURE_CHANGED")
+            }
             AgentGateway.Status.PAIRED -> Unit
         }
         if (msg.what == MSG_BROKER) return broker(pkg, d, to, requestId)
@@ -121,6 +125,7 @@ class AgentGatewayService : Service() {
             return reply(to, MSG_REDEEMED, Bundle().apply { putBoolean(AegisProtocol.KEY_GRANTED, granted); if (token != null) putString(AegisProtocol.KEY_TOKEN, token) }, requestId)
         }
         val decision = AgentGateway.firewall.evaluate(request)
+        if (decision.verdict() == Verdict.DENY) decision.reasons().firstOrNull()?.let { Signals.record(this, Correlator.Kind.AGENT_REFUSED, pkg, it) }
         if (decision.verdict() == Verdict.ASK_USER && decision.approvalId() != null) {
             AgentGateway.addApproval(approvalItem(decision, pkg, request, ""))
             AgentNotifier.notifyWaiting(this)
