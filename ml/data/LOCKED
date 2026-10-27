@@ -1,0 +1,4 @@
+# Evaluation files that training data must never overlap with (checked by ModelTrainer before every training run).
+# reviewer-novel.txt is the only independent held-out set; never tune on it and never add its messages to training.
+reviewer-novel.txt
+spot-set.txt

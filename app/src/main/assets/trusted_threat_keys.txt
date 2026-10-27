@@ -1,0 +1,2 @@
+# Base64 X.509 EC P-256 public keys (one per line) allowed to sign threat bundles.
+# Intentionally empty: no production signing key exists yet, so no update can be accepted.

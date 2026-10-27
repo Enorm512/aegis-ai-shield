@@ -1,0 +1,2 @@
+# DEBUG-BUILD ONLY test key. Its private half is public in tools/debug-test-key; never ship it in a release.
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQBQwFsrOoCzqqHbMKUTK02vjjNdWo5ukqt2/VmHI9Vh+ohM0TGChDhCGDOF2SiOd8sXPVqrrFNuGamiTXYbssA==

@@ -1,0 +1,3 @@
+D aegis-test-phish.example PHISHING CONFIRMED debug-test-domain
+D aegis-test-scam.example SCAM STRONG debug-test-domain
+D aegis-test-extra.example UNWANTED SUSPICIOUS debug-test-domain

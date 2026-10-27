@@ -1,0 +1,1 @@
+<resources><style name="Theme.Aegis" parent="android:style/Theme.Material.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowLightStatusBar">false</item><item name="android:windowActionModeOverlay">true</item><item name="android:colorAccent">#63E3B0</item><item name="android:windowBackground">#0A1118</item></style></resources>

@@ -1,0 +1,8 @@
+# Keep files byte-identical across platforms: signed fixtures and model files must not be rewritten, and shell
+# scripts must keep LF for Linux CI. Overrides a global core.autocrlf.
+* text=auto eol=lf
+gradlew.bat text eol=crlf
+*.bundle binary
+*.png binary
+*.jar binary
+*.webp binary

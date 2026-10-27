@@ -1,0 +1,11 @@
+AEGIS-THREATDB 1
+key-id: febb00329c06a219
+sequence: 2
+issued: 2026-10-26T20:15:16Z
+expires: 2026-12-25T20:15:16Z
+entries: 3
+D aegis-test-phish.example PHISHING CONFIRMED debug-test-domain
+D aegis-test-scam.example SCAM STRONG debug-test-domain
+D aegis-test-extra.example UNWANTED SUSPICIOUS debug-test-domain
+END
+SIGNATURE MEUCIFLNEQAJGaYxDBCo7hK5j5DgvigKJLh00zKaVm3Ofe1sAiEA2Lksz3DJWSOA6ybE9+BB+FiD1L3/nvM3AFzFCOHPisM=

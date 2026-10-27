@@ -1,0 +1,136 @@
+1|en|Your account has been suspended. Verify your identity immediately at the link below to avoid permanent closure.
+1|en|Dear customer, unusual activity was detected on your bank account. Confirm your password and one-time code now.
+1|en|Congratulations! You have won a $1000 gift card. Pay a small shipping fee in bitcoin to claim your prize.
+1|en|Your package could not be delivered. Pay the customs fee of 2 USD within 24 hours or it will be returned.
+1|en|URGENT: Your BankID has expired. Click here to renew and enter your security code.
+1|en|This is the tax office. You owe unpaid taxes and a warrant will be issued unless you pay today with gift cards.
+1|en|Hi, I am a lonely engineer working overseas. I love you and need you to send money for my flight ticket.
+1|en|Invest now in our crypto platform and double your money in 7 days guaranteed with zero risk.
+1|en|Your Netflix payment failed. Update your card details immediately to keep your subscription active.
+1|en|Security alert: someone tried to log in to your account. Reply with the verification code we sent to you.
+1|en|Final notice: your mobile subscription will be cancelled today. Log in to confirm your payment details.
+1|en|I am a prince and I have inherited millions. Send me your bank details so I can transfer the funds to you.
+1|en|Your Apple ID is locked. Verify your account within 12 hours or it will be permanently disabled.
+1|en|Hello, I saw your CV online. Easy job, earn 500 dollars per day working from home. Message me on WhatsApp.
+1|en|You have a refund waiting from the government. Enter your card number and PIN to receive the payment.
+1|en|Dad it's me, I lost my phone and this is my new number. Please send money to this account urgently.
+1|en|Your PayPal account is limited. Confirm your information now or we will close your account.
+1|en|Act now! Limited offer. Send 200 euro in gift cards to unlock your lottery winnings.
+1|en|Your computer is infected with a virus. Call this number immediately and allow remote access to fix it.
+1|en|Police notice: you are under investigation. Contact us immediately and pay the fine to avoid arrest.
+1|en|We could not charge your card. Click the link and enter your CVV to avoid service interruption.
+1|en|Exclusive crypto airdrop: connect your wallet and enter your seed phrase to receive free tokens.
+1|en|Your parcel is held at the depot. Confirm your address and pay the redelivery fee now.
+1|en|Hi dear, I am a soldier stationed abroad. I need your help to move my savings, please share your account password.
+1|en|Your email storage is full. Click to verify your mailbox password or your messages will be deleted.
+1|en|Congratulations, you were selected for a free iPhone. Complete the survey and pay shipping only.
+1|en|Please send me the code you just received by SMS, it was sent to you by mistake.
+1|en|Your invoice is overdue. Open the attachment and pay immediately to avoid legal action.
+1|en|Trading signals from our expert guarantee 300 percent profit. Deposit now to join the VIP group.
+1|en|Your Microsoft account will be closed. Sign in now to keep your files and confirm your password.
+1|en|Ahead of your tax refund we need your bank login. Please provide username and password.
+1|en|You are the lucky winner of our lottery. To receive your prize transfer the processing fee today.
+1|en|Bank security team: a transfer is pending. Share the code from your authenticator app to cancel it.
+1|en|Your Amazon order of 900 dollars was placed. If this was not you, call this number and give your card details.
+1|en|Send bitcoin to this wallet and you will receive double back within one hour.
+1|no|Kontoen din er sperret. Bekreft identiteten din umiddelbart via lenken for å unngå permanent stenging.
+1|no|Din BankID utløper i dag. Klikk her og oppgi sikkerhetskoden din for å fornye.
+1|no|Pakken din kunne ikke leveres. Betal et gebyr på 29 kroner innen 24 timer ellers returneres den.
+1|no|Du har vunnet 10 000 kroner! Betal et lite gebyr med gavekort for å motta premien.
+1|no|Hei, jeg er politi. Du er under etterforskning og må betale bot umiddelbart for å unngå arrestasjon.
+1|no|Vipps: Det er registrert uvanlig aktivitet. Send oss engangskoden du fikk på SMS for å bekrefte.
+1|no|Invester i krypto nå og doble pengene dine på en uke, garantert uten risiko.
+1|no|Skatteetaten: Du har penger til gode. Oppgi kortnummer og PIN for å motta utbetalingen.
+1|no|Hei pappa, jeg har mistet telefonen og dette er mitt nye nummer. Kan du overføre penger raskt?
+1|no|Betalingen din feilet. Oppdater kortopplysningene dine straks for å beholde abonnementet.
+1|no|Din konto i DNB er begrenset. Logg inn med BankID på lenken og oppgi passord for å åpne den.
+1|no|Mistenkelig innlogging oppdaget. Svar med verifiseringskoden vi sendte deg, ellers stenges kontoen.
+1|no|Gratulerer, du er valgt ut til å få en gratis iPhone. Betal kun frakt.
+1|no|Datamaskinen din har virus. Ring dette nummeret nå og gi oss fjerntilgang.
+1|no|Siste varsel fra inkasso: betal fakturaen i dag, ellers sendes saken til namsmannen.
+1|no|Jeg elsker deg og trenger penger til flybillett. Send til denne kontoen så snart som mulig.
+1|no|Posten: Vi holder pakken din tilbake. Bekreft adressen og betal omsendingsgebyr nå.
+1|no|E-postkontoen din er full. Bekreft passordet ditt her, ellers slettes meldingene dine.
+1|no|Tjen 5000 kroner om dagen hjemmefra. Kontakt meg på WhatsApp for enkel jobb.
+1|no|Del koden du nettopp fikk på SMS, den ble sendt til deg ved en feil.
+1|no|Du har en ubetalt regning. Åpne vedlegget og betal umiddelbart for å unngå rettslige skritt.
+1|no|Bank-sikkerhet: en overføring venter. Oppgi koden fra BankID-appen for å avbryte den.
+1|no|Koble til lommeboken din og skriv inn seed-frasen for å motta gratis tokens i vår kryptogave.
+1|no|Handelssignaler fra ekspert garanterer 300 prosent fortjeneste. Sett inn penger nå for VIP-gruppen.
+1|no|Mobilabonnementet ditt kanselleres i dag. Logg inn og bekreft betalingsopplysningene dine.
+1|no|Vi har en refusjon til deg. Gi oss brukernavn og passord til nettbanken for å få pengene.
+1|no|Haster! Send 2000 kroner i gavekort for å låse opp lotterigevinsten din.
+1|no|Microsoft-kontoen din stenges. Logg inn nå og bekreft passordet for å beholde filene dine.
+1|no|Ordren din på 9000 kroner er lagt inn. Hvis dette ikke var deg, ring oss og oppgi kortopplysningene.
+1|no|Send bitcoin til denne adressen og få dobbelt tilbake innen én time.
+1|no|Hei kjære, jeg er soldat i utlandet og trenger hjelp. Del passordet til kontoen din så jeg kan flytte sparepengene.
+0|en|Hi, are we still meeting for lunch tomorrow at noon?
+0|en|Your verification code is 482913. Do not share this code with anyone. We will never ask for it.
+0|en|Your package has been shipped and will arrive on Thursday. Track it in the app.
+0|en|Reminder: your dentist appointment is on Monday at 9:30. Reply C to confirm.
+0|en|Thanks for your payment of 249 kr. Your receipt is attached to this email.
+0|en|The meeting has been moved to 3 pm. Please bring the quarterly report.
+0|en|Happy birthday! Hope you have a wonderful day with family and friends.
+0|en|Your bank statement for October is now available in online banking.
+0|en|Can you pick up milk and bread on your way home?
+0|en|We have updated our privacy policy. You can read the changes on our website.
+0|en|Your order has been delivered to the parcel locker. Collect it within 7 days.
+0|en|The train to Oslo is delayed by 15 minutes due to signal failure.
+0|en|Please find the minutes from yesterday's project meeting below.
+0|en|Security tip: never share your password or PIN with anyone, including bank staff.
+0|en|Your flight check-in opens 24 hours before departure. Have your passport ready.
+0|en|Dinner at my place on Saturday? I'm making lasagna.
+0|en|Your invoice 2041 for October is attached. Payment is due in 30 days.
+0|en|The package from the pharmacy is ready for pickup at the counter.
+0|en|Your subscription has been renewed for another month. Manage it in settings.
+0|en|Great game last night! Let's play again next week.
+0|en|We noticed a new login from your laptop in Bergen. If this was you, no action is needed.
+0|en|The kids' school trip is on Friday. Remember packed lunches and rain jackets.
+0|en|Your electricity bill is ready. The amount will be charged automatically on the 20th.
+0|en|I just wanted to say thank you for helping me move last weekend.
+0|en|Your car service is scheduled for Tuesday. Call the workshop if you need to change it.
+0|en|Reminder to submit your timesheet before Friday noon.
+0|en|Bank notice: we will never ask for your PIN or BankID codes by phone or message.
+0|en|The new version of the app includes bug fixes and performance improvements.
+0|en|Hello, your library book is due next week. You can renew it online.
+0|en|Congratulations on your new job! Let's celebrate soon.
+0|en|Lunch special today: soup and sandwich for 129 kroner.
+0|en|Your payment of 1200 kr to the landlord was received. Thank you.
+0|en|Weather warning: strong winds expected tonight along the coast.
+0|en|The doctor's office is closed on Monday for the holiday.
+0|en|Can you send me the slides from the presentation when you have a minute?
+0|no|Hei, skal vi møtes til lunsj i morgen klokken tolv?
+0|no|Din engangskode er 482913. Ikke del denne koden med noen. Vi spør aldri etter den.
+0|no|Pakken din er sendt og kommer torsdag. Følg den i appen.
+0|no|Påminnelse: du har time hos tannlegen mandag klokken 9.30.
+0|no|Takk for betalingen på 249 kroner. Kvitteringen ligger vedlagt i e-posten.
+0|no|Møtet er flyttet til klokken 15. Husk å ta med kvartalsrapporten.
+0|no|Gratulerer med dagen! Håper du får en fin dag sammen med familie og venner.
+0|no|Kontoutskriften for oktober er klar i nettbanken.
+0|no|Kan du kjøpe melk og brød på vei hjem?
+0|no|Vi har oppdatert personvernerklæringen vår. Du kan lese endringene på nettsiden.
+0|no|Bestillingen din er levert i pakkeboksen. Hent den innen 7 dager.
+0|no|Toget til Oslo er forsinket med 15 minutter på grunn av signalfeil.
+0|no|Her er referatet fra gårsdagens prosjektmøte.
+0|no|Sikkerhetstips: del aldri passordet eller PIN-koden din med noen, heller ikke bankansatte.
+0|no|Innsjekkingen til flyet åpner 24 timer før avgang. Ha passet klart.
+0|no|Middag hos meg på lørdag? Jeg lager lasagne.
+0|no|Faktura 2041 for oktober er vedlagt. Forfall om 30 dager.
+0|no|Pakken fra apoteket er klar til henting i skranken.
+0|no|Abonnementet ditt er fornyet for en ny måned. Administrer det i innstillinger.
+0|no|Flott kamp i går! La oss spille igjen neste uke.
+0|no|Vi la merke til en ny innlogging fra din bærbare i Bergen. Var det deg, trenger du ikke gjøre noe.
+0|no|Skoleturen er på fredag. Husk matpakke og regnjakke.
+0|no|Strømregningen er klar. Beløpet trekkes automatisk den 20.
+0|no|Jeg ville bare si takk for hjelpen med flyttingen i helgen.
+0|no|Bilen din skal på service tirsdag. Ring verkstedet hvis du vil endre tiden.
+0|no|Husk å levere timelisten før fredag klokken tolv.
+0|no|Banken ber deg aldri oppgi PIN eller BankID-koder over telefon eller melding.
+0|no|Den nye versjonen av appen inneholder feilrettinger og ytelsesforbedringer.
+0|no|Hei, biblioteksboken din forfaller neste uke. Du kan fornye den på nett.
+0|no|Gratulerer med ny jobb! La oss feire snart.
+0|no|Dagens lunsj: suppe og sandwich for 129 kroner.
+0|no|Betalingen på 1200 kroner til utleier er mottatt. Takk.
+0|no|Farevarsel: kraftig vind i natt langs kysten.
+0|no|Legekontoret er stengt mandag på grunn av høytiden.
+0|no|Kan du sende meg lysbildene fra presentasjonen når du har tid?

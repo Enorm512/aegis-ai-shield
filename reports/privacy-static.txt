@@ -1,0 +1,1 @@
+PASS: permission-free manifest, backup/cleartext off, no services, XML, 20 Norwegian finding mappings

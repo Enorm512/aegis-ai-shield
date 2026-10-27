@@ -1,0 +1,12 @@
+# FeedBuilder source manifest (example). One source per line: id|licence|category|confidence|path|attribution
+# Paths are relative to this file. Download each list yourself after reading its terms; FeedBuilder never goes online.
+# Allowed licences: OWN CC0-1.0 Unlicense MIT 0BSD ISC BSD-2-Clause BSD-3-Clause Apache-2.0 CC-BY-4.0 (others are refused).
+# Start third-party lists at SUSPICIOUS (warn only in DNS protection) until their false-positive rate is known.
+#
+# phishdb|MIT|PHISHING|SUSPICIOUS|lists/phishing-domains-ACTIVE.txt|Phishing.Database, https://github.com/Phishing-Database/Phishing.Database (MIT)
+# blp-scam|Unlicense|SCAM|SUSPICIOUS|lists/blp-scam.txt|The Block List Project, https://github.com/blocklistproject/Lists
+# own-no|OWN|PHISHING|STRONG|lists/aegis-norway-reviewed.txt|Aegis team, manually reviewed Norwegian scam domains
+#
+# Then:
+#   java -cp <core classes> com.aegis.core.FeedBuilder tools/feed-sources.txt tools/feed-allowlist.txt out/entries.txt out/ATTRIBUTION.txt
+#   java -cp <core classes> com.aegis.core.ThreatBundleTool sign <offline-key-prefix> <sequence> 30 out/entries.txt out/aegis.bundle

@@ -1,0 +1,69 @@
+# Spot-test regression set (kind|OK/BAD|input). Written 2026-10-27 during review; both halves were used while fixing the Norwegian/accent/TLD rules, so they are regression tests, NOT an independent evaluation.
+U|OK|https://www.dnb.no/privat
+U|OK|https://www.vipps.no/
+U|OK|https://www.posten.no/sporing
+U|OK|https://github.com/anthropics
+U|OK|https://nrk.no/nyheter
+U|BAD|http://dnb-sikkerhet-verifiser.com/login
+U|BAD|https://bankid.no.secure-login.xyz/a
+U|BAD|https://paypa1.com/signin
+U|BAD|https://xn--vipps-9ra.no
+U|BAD|https://posten-pakke-toll.top/betal
+U|BAD|https://amazon-account-verify.help/signin
+U|BAD|https://login.microsoft.com.evil-example.net/auth
+U|BAD|https://netflix.billing-update.info
+U|BAD|https://sparebank1-id.com/innlogging
+M|BAD|Pakken din er stoppet i tollen. Betal 29 kr toll her innen 24 timer ellers returneres den: https://posten-toll.top/betal
+M|BAD|Hei mamma, jeg har ny telefon. Kan du sende 4500 kr til dette kontonummeret? Jeg betaler tilbake i morgen.
+M|BAD|Your account has been limited. Confirm your identity within 12 hours to avoid permanent suspension: http://acct-secure-check.cc
+M|BAD|Congratulations! You won a 1000 USD gift card. Pay a 5 USD shipping fee to claim your prize now.
+M|BAD|DNB: Vi har oppdaget uvanlig aktivitet. Oppgi BankID-koden din på denne siden for å unngå sperring.
+M|BAD|Kjære kunde, strømregningen din er ubetalt. Betal nå via lenken for å unngå utkobling i dag.
+M|BAD|Hi, this is the IRS. A warrant has been issued. Buy gift cards and read me the codes to settle your debt.
+M|BAD|Investment tip: our members make 300% weekly with crypto signals. DM me to join the VIP group today.
+M|OK|Hei! Skal vi ta en kaffe i morgen klokka 12? Sier ifra hvis det ikke passer.
+M|OK|Your order #4412 has shipped and will arrive Thursday. Track it in the app.
+M|OK|Møtet er flyttet til torsdag kl. 10. Ta med rapporten.
+M|OK|Reminder: dentist appointment tomorrow at 14:30. Reply C to confirm.
+M|OK|Din kode for innlogging er 482913. Ikke del den med noen.
+M|OK|Hi Anna, can you send me the notes from yesterday's meeting? Thanks!
+M|OK|Bank payment of 250 NOK to Rema 1000 was completed.
+U|OK|https://www.telenor.no/privat/mobil
+U|OK|https://www.skatteetaten.no/person/skatt/
+U|OK|https://id.vipps.no/login
+U|OK|https://www.nordea.no/privat
+U|OK|https://www.amazon.com/gp/css/order-history
+U|OK|https://login.microsoftonline.com/common/oauth2
+U|OK|https://stackoverflow.com/questions/tagged/java
+U|OK|https://www.altinn.no/skjemaoversikt/
+U|OK|https://paypal.me/someone
+U|OK|https://www.bring.no/sporing/pakker
+U|OK|https://my-portfolio.dev/projects
+U|OK|https://lokalavisa.no/nyheter/toll-og-avgift-endringer
+U|OK|https://apple-pie-recipes.com/easy
+U|BAD|https://telenor-kundeservice-sperret.xyz/logginn
+U|BAD|https://skatteetaten-refusjon.top/krev
+U|BAD|https://altinn-innlogging-bekreft.com
+U|BAD|https://v1pps-betaling.net
+U|BAD|https://nordea.kontoen-sperret.click/id
+U|BAD|https://paypal-support.account-limited.buzz
+U|BAD|https://appleid-verify.cfd/unlock
+U|BAD|https://bring-sporing-pakke.icu/avgift
+M|OK|Pakken din fra Posten er levert til postkassen. Se sporing i appen.
+M|OK|Hei mamma, jeg kommer hjem klokka 17. Kan du kjøpe melk på veien? Takk!
+M|OK|Faktura 20431 fra Telenor forfaller 15. november. Betal via nettbanken eller AvtaleGiro.
+M|OK|Our weekly newsletter: 5 ways to invest in your skills this year. Join our free webinar on Tuesday.
+M|OK|Husk å betale kontingenten til fotballklubben innen fredag. Kontonummer står på nettsiden.
+M|OK|Your parcel will be delivered tomorrow between 9 and 12. No payment is needed.
+M|OK|Hi dad, my phone is at 5% so I'll text from my laptop later. Love you!
+M|OK|Can you lend me your charger for tomorrow? I'll bring it back Monday.
+M|OK|Bank statement for October is ready. Log in to the official app to view it.
+M|OK|Gavekort til bursdagen: jeg kjøpte et til deg i går, hentes hos meg.
+M|OK|The market returned 8% last year according to the annual report, a decent year for long-term savers.
+M|BAD|Hei, dette er pappa. Jeg har fått nytt nummer, mistet telefonen i går. Kan du overføre 6000 kr til konto 1234.56.78901 i dag? Gir deg det tilbake.
+M|BAD|DHL: Pakken din ligger i tollen. Betal tollgebyr på 39 kr her: http://dhl-toll-gebyr.top/pay ellers sendes den tilbake.
+M|BAD|Din strømavtale er ubetalt og vil bli avstengt i dag. Betal nå for å unngå inkasso: nordic-strom-betaling.com
+M|BAD|Earn guaranteed profit every day with our crypto trading signals. Message me on Telegram to join the VIP group.
+M|BAD|Police notice: you are wanted for tax fraud. Pay the fine today using gift cards or face arrest.
+M|BAD|Mum, I broke my phone, this is my new number. Please send 300 euro to this account, I'll explain later.
+M|BAD|Vi har holdt tilbake pakken din. Betal 25 kr i leveringsgebyr på lenken for å få levert i dag: https://postnord-levering.click/betal

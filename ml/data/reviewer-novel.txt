@@ -1,0 +1,95 @@
+1|en|Dear valued client, our records show an unpaid toll on your vehicle. Settle 4.99 now at the portal below to avoid a penalty of 150.
+1|en|Your Visa card ending 4471 has been temporarily frozen. To lift the restriction please verify your full card number and the three digits on the back.
+1|en|Hey, it's me again, remember the investment I told you about? My uncle at the fund says the window closes Friday. Put in 2000 and you will have 6000 by next month, no way to lose.
+1|en|You have a new voice message. Sign in with your email password to listen to it.
+1|en|I'm the CEO and I'm in meetings all day. I need you to buy five Amazon vouchers for a client, scratch off the codes and send me the photos. Keep this between us.
+1|en|Final reminder from HM Revenue: you are entitled to a rebate of 458.20. Submit your bank sort code and account number today to receive it.
+1|en|My darling, I can't wait to meet you in person. The customs officer in Dubai is holding my gift for you, I just need 300 for the fee.
+1|en|Your Coinbase wallet has been flagged. Move your funds to our safe wallet address immediately before they are lost.
+1|en|Hi, this is Microsoft support. We saw hackers in your computer. Please download AnyDesk and give us the nine digit number so we can clean it.
+1|en|Job offer: we pay 300 per day to review products at home. Just buy the item first, we refund you plus a bonus, contact our manager on Telegram.
+1|en|Your SIM card will be deactivated in 24 hours unless you confirm your identity here with your personal ID and the code we texted you.
+1|en|Security center: sign in attempt from Russia was blocked. Tap the secure link and enter the six digit code from your authenticator to cancel the transfer.
+1|en|Hello dear, I am a widow with a large inheritance and no children. I wish to donate it to you, please send a copy of your passport and your account details.
+1|en|You were randomly selected as a winner in the Samsung anniversary draw. Pay the delivery charge of 15 euro by gift card to receive your new phone.
+1|en|Netflix: your membership could not be renewed. Update your payment method now or your account will be terminated today.
+1|en|Please help, I was robbed on holiday and my wallet is gone. I need you to wire 800 pounds to this account so I can fly home, I will repay you.
+1|en|The delivery company tried to reach you twice. Choose a new delivery time and pay the small handling fee on this page or the package will be destroyed.
+1|en|Earn passive income with our AI trading bot, members make 8 percent per week. Send USDT to start and withdraw whenever you like.
+1|en|Your phone number has been chosen for a government grant of 5000. To release the funds, send a fee of 100 through a prepaid card.
+1|en|Alert: your online banking access expires tonight. Reactivate by entering your user ID, password and the one-time code on the verification page.
+1|no|Hei, din Vipps er midlertidig sperret på grunn av sikkerhet. Trykk på lenken og skriv inn fødselsnummer og kortnummer for å låse den opp.
+1|no|Du har ubetalt bompenger på 39 kroner. Betal i dag via lenken for å unngå et tilleggsgebyr på 500 kroner.
+1|no|Jeg er sjefen din og sitter i møte. Kjøp gavekort for 5000 kroner til en kunde og send meg kodene her. Ikke si det til noen.
+1|no|Hei, det er meg igjen. Husker du investeringen jeg nevnte? Setter du inn 2000 nå har du 6000 neste måned, helt risikofritt.
+1|no|Banken din her. Vi har oppdaget svindel på kontoen din. Les opp BankID-koden du nettopp fikk slik at vi kan stoppe den.
+1|no|Nav har beregnet at du har krav på tilbakebetaling på 4800 kroner. Oppgi kontonummer og kortets sikkerhetskode på siden for å få utbetaling.
+1|no|Jeg savner deg så mye, vennen min. Tollerne holder pakken min og jeg trenger 3000 kroner til gebyret, kan du sende via Bitcoin?
+1|no|Du har fått en ny talemelding. Logg inn med e-postpassordet ditt for å høre den.
+1|no|Vi ser at datamaskinen din er infisert. Installer AnyDesk og oppgi tallkoden så fjerner vi viruset for deg.
+1|no|Gratulerer! Du er trukket ut til å vinne en ny Samsung. Betal 150 kroner i frakt med Paysafe-kort for å få den tilsendt.
+1|no|Mobilnummeret ditt deaktiveres om 24 timer med mindre du bekrefter identiteten din. Svar med personnummer og koden du fikk på SMS.
+1|no|Kryptolommeboken din er markert som usikker. Overfør alle midlene til vår sikre adresse umiddelbart.
+1|no|Jobbtilbud: vi betaler 3000 per dag for å teste produkter hjemme. Kjøp varen først, så får du refundert med bonus. Kontakt lederen vår på Telegram.
+1|no|Hjelp, jeg ble ranet på ferie og har mistet lommeboken. Kan du sende 8000 kroner til denne kontoen så jeg kommer meg hjem? Jeg betaler tilbake.
+1|no|Sikkerhetssenter: et innloggingsforsøk fra Russland ble stoppet. Åpne lenken og skriv inn koden fra autentiseringsappen for å avbryte overføringen.
+1|no|Pakken din ligger i tollen. Velg ny leveringstid og betal ekspedisjonsgebyret på siden, ellers destrueres den.
+1|no|Kjære venn, jeg er enke med en stor arv. Jeg vil gi den til deg, send kopi av passet og kontoopplysningene dine.
+1|no|Netflix: medlemskapet ditt ble ikke fornyet. Oppdater betalingsmåten nå, ellers stenges kontoen i dag.
+1|no|Din nettbanktilgang utløper i kveld. Reaktiver ved å taste brukernavn, passord og engangskode på verifiseringssiden.
+1|no|Tjen penger passivt med AI-roboten vår, medlemmer tjener 8 prosent i uken. Send USDT for å starte og ta ut når du vil.
+1|no|Telefonnummeret ditt er valgt ut til en statlig støtte på 5000 kroner. Betal et gebyr på 100 kroner med forhåndsbetalt kort for å få utbetalt.
+0|en|Your one-time code is 538201. Enter it in the app to sign in. Never share it with anyone.
+0|en|Use 774412 to confirm your card payment of 349 NOK at Elkjop. If you did not make this purchase, call the number on the back of your card.
+0|en|Your DHL parcel is out for delivery today between 13:00 and 17:00. Track it with the link in your DHL app.
+0|en|Customs duty of 129 kr is due before your parcel can be delivered. Pay in the Posten app or at the pickup point.
+0|en|Flash sale! 40 percent off all jackets until midnight. Free shipping on orders over 500 kroner.
+0|en|Limited offer: upgrade to premium for just 49 kr per month. Cancel any time in settings.
+0|en|We blocked your card after an unusual purchase in Madrid. If this was you, reply YES. Otherwise call us on the number printed on your card.
+0|en|Heads up, the car park will be closed on Thursday for resurfacing. Please move your vehicle by Wednesday evening.
+0|en|Your invoice from Telenor for October is 599 kr and is due on the 15th. Pay in the app or by e-invoice.
+0|en|Reminder: your annual tax return is due April 30. You can file it in the official tax portal.
+0|en|Hi mum, can you transfer the money for the school trip to my account tonight? I will pay you back on Friday.
+0|en|Congratulations on the promotion! Drinks on me on Friday, you deserve it.
+0|en|Your Spotify payment of 129 kr was successful. Thanks for being a Premium member.
+0|en|Booking confirmed: Scandic Bergen, 14 to 16 November. Check-in from 15:00, bring a valid photo ID.
+0|en|Your ride is arriving in 3 minutes. Look for a white Tesla with plate EL 12345.
+0|en|We detected a login from a new device. If this was you, you can ignore this message. If not, change your password in the official app.
+0|en|The prize draw at the school fair is on Saturday at two. Tickets are 20 kroner each.
+0|en|Can you send me the bank account number for the rent? I will pay it this afternoon.
+0|en|Your Bitcoin purchase of 0.002 BTC on the exchange has been completed. View your transaction history in the app.
+0|en|Notice: the water supply will be shut off on Tuesday between 9 and 12 for maintenance work.
+0|en|Your insurance policy renews on 1 December. No action is needed, the premium will be charged automatically.
+0|en|Please confirm your attendance at the workshop by replying before Friday. We need a final headcount for lunch.
+0|en|The police have asked witnesses of the accident on Storgata to come forward. Contact the station if you saw anything.
+0|en|Your password has been reset as requested. If you did not request this, contact support through the official website.
+0|en|Urgent: server maintenance tonight at 22:00. Please save your work and log out before then.
+0|no|Engangskoden din er 538201. Bruk den for å logge inn i nettbanken. Ikke gi den til noen.
+0|no|Bruk kode 774412 for å bekrefte kortbetalingen på 349 kroner hos Elkjøp. Var det ikke deg, ring nummeret bak på kortet.
+0|no|Pakken din fra Postnord leveres i dag mellom 13 og 17. Følg med i appen.
+0|no|Toll og avgift på 129 kr må betales før pakken kan leveres. Betal i Posten-appen eller på hentestedet.
+0|no|Lynsalg! 40 prosent avslag på alle jakker til midnatt. Gratis frakt over 500 kroner.
+0|no|Tilbud i dag: oppgrader til premium for 49 kr i måneden. Du kan si opp når som helst.
+0|no|Vi har sperret kortet ditt etter et uvanlig kjøp i Madrid. Var det deg, svar JA. Ellers ring oss på nummeret som står på kortet.
+0|no|Obs! Parkeringsplassen stenges torsdag på grunn av asfaltering. Flytt bilen innen onsdag kveld.
+0|no|Fakturaen din fra Telenor for oktober er på 599 kr og forfaller den 15. Betal i appen eller med eFaktura.
+0|no|Påminnelse: skattemeldingen skal leveres innen 30. april. Du leverer den på skatteetaten.no.
+0|no|Hei mamma, kan du overføre penger til skoleturen i kveld? Jeg betaler deg tilbake på fredag.
+0|no|Gratulerer med forfremmelsen! Jeg spanderer en øl på fredag, du har fortjent det.
+0|no|Betalingen din på 129 kr til Spotify er gjennomført. Takk for at du er Premium-medlem.
+0|no|Bestillingen er bekreftet: Scandic Bergen, 14. til 16. november. Innsjekk fra klokken 15, ta med gyldig legitimasjon.
+0|no|Drosjen din kommer om 3 minutter. Se etter en hvit Tesla med skilt EL 12345.
+0|no|Vi la merke til en innlogging fra en ny enhet. Var det deg, kan du se bort fra denne meldingen. Hvis ikke, bytt passord i den offisielle appen.
+0|no|Trekningen på skolens basar er på lørdag klokken to. Lodd koster 20 kroner.
+0|no|Kan du sende meg kontonummeret til utleier? Jeg betaler husleien i ettermiddag.
+0|no|Kjøpet ditt av 0,002 BTC er gjennomført. Se transaksjonshistorikken i appen.
+0|no|Varsel: vannet stenges tirsdag mellom klokken 9 og 12 på grunn av vedlikehold.
+0|no|Forsikringen din fornyes 1. desember. Du trenger ikke gjøre noe, premien trekkes automatisk.
+0|no|Bekreft oppmøte på kurset ved å svare innen fredag. Vi trenger et endelig antall til lunsj.
+0|no|Politiet ber vitner til ulykken i Storgata melde seg. Kontakt politistasjonen hvis du så noe.
+0|no|Passordet ditt er tilbakestilt etter ønske. Hvis du ikke ba om dette, kontakt kundeservice via den offisielle nettsiden.
+0|no|Haster: servervedlikehold i kveld klokken 22. Lagre arbeidet og logg ut før den tid.
+0|no|Din BankID-app er oppdatert til siste versjon. Ingen handling er nødvendig.
+0|no|Hei, her er lenken til møtet i morgen. Jeg sender agendaen senere i dag.
+0|en|Hello, your BankID was successfully activated on your new phone. If you did not do this, contact your bank.
+0|en|Hi, it is Sara from the bank. As we discussed, I have emailed the loan documents. Call me back when you have read them.

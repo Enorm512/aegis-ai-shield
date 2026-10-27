@@ -1,0 +1,14 @@
+*.iml
+.gradle/
+**/build/
+local.properties
+*.jks
+*.keystore
+.idea/
+keystore.properties
+*.p12
+*.pfx
+.kotlin/
+# Third-party datasets and experimental models built from them: re-downloadable (see ml/external/README.md), never shipped.
+ml/external/raw/
+ml/external/processed/

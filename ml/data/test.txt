@@ -1,0 +1,50 @@
+1|en|We detected a problem with your online banking. Please confirm your login details through this secure link today.
+1|en|You've been chosen to receive a cash prize of 50,000. Send a processing fee by cryptocurrency to release it.
+1|en|Your delivery is pending. A small fee is needed, pay now at the link or the parcel goes back.
+1|en|Hello, it's your son. My phone broke, I'm texting from a friend's. Can you transfer money for a bill right now?
+1|en|Your credit card has been blocked for suspicious purchases. Provide your PIN so we can unblock it.
+1|en|Make money fast: our trading bot guarantees daily profits. Deposit today and watch it grow with no risk.
+1|en|Tax authority notice: legal action will begin unless you settle the amount using gift cards before midnight.
+1|en|Your Google account will be deleted. Verify your password within 6 hours to keep your photos.
+1|en|Please read me the six digit code that just arrived on your phone so I can verify your identity.
+1|en|Beautiful, I fell for you the moment we spoke. I need help paying hospital bills, can you wire some money?
+1|en|Remote support: your device is compromised, install this program so our technician can fix it.
+1|en|Free crypto giveaway! Enter your recovery phrase on our site to claim your tokens before time runs out.
+1|no|Din bankkonto er midlertidig stengt. Logg inn via lenken og skriv inn BankID-koden din for å åpne den igjen.
+1|no|Gratulerer, du har vunnet en bil! Betal tollavgift med bitcoin i dag for å få den levert.
+1|no|Vi kunne ikke levere pakken. Betal 39 kroner på lenken innen i kveld, ellers sendes den i retur.
+1|no|Hei mamma, mobilen min ødela seg. Dette er et nytt nummer, kan du overføre penger til regningen nå?
+1|no|Kortet ditt er sperret på grunn av mistenkelige kjøp. Oppgi PIN-koden så åpner vi det.
+1|no|Tjen penger raskt med handelsroboten vår. Garantert daglig gevinst uten risiko, sett inn penger i dag.
+1|no|Skatteetaten varsler rettslige skritt med mindre du betaler med gavekort før midnatt.
+1|no|Google-kontoen din slettes. Bekreft passordet innen 6 timer for å beholde bildene dine.
+1|no|Les opp den sekssifrede koden som kom på telefonen din så jeg kan bekrefte identiteten din.
+1|no|Kjære, jeg ble forelsket i deg med en gang. Jeg trenger penger til sykehusregning, kan du sende noe?
+1|no|Enheten din er hacket. Installer dette programmet så en tekniker kan fikse det eksternt.
+1|no|Gratis krypto! Skriv inn gjenopprettingsfrasen din på siden vår for å få tokens før tiden går ut.
+1|no|Siste påminnelse: abonnementet ditt stanses i dag med mindre du oppdaterer kortinformasjonen nå.
+0|en|Good morning, the team standup is at ten. See you in the usual room.
+0|en|Your code is 771204. It expires in ten minutes. Never share it with anyone.
+0|en|Thanks for ordering. Your parcel will be delivered tomorrow between 10 and 14.
+0|en|The dentist called to say your appointment on Wednesday has been moved to Thursday at 11.
+0|en|Reminder: pay the rent by the end of the month using the usual bank transfer.
+0|en|We are out of coffee at the office, can someone buy more?
+0|en|Your monthly statement is ready. Log in to your bank's official app to view it.
+0|en|Happy anniversary! Dinner reservation is at seven at the Italian place.
+0|en|Your account password was changed successfully. If you did not do this, contact support through the official website.
+0|en|The garage sale is on Saturday morning. Bring chairs if you can.
+0|en|Invoice 5532 has been paid in full. No further action is required.
+0|en|Heads up: scammers are sending fake delivery texts. Do not click links from unknown senders.
+0|no|God morgen, teammøtet er klokken ti. Vi sees i vanlig rom.
+0|no|Koden din er 771204. Den utløper om ti minutter. Del den aldri med noen.
+0|no|Takk for bestillingen. Pakken leveres i morgen mellom 10 og 14.
+0|no|Tannlegen ringte og sa at timen din onsdag er flyttet til torsdag klokken 11.
+0|no|Påminnelse: betal husleien innen månedsslutt som vanlig.
+0|no|Vi er tomme for kaffe på kontoret, kan noen kjøpe mer?
+0|no|Månedsoppgaven din er klar. Åpne bankens offisielle app for å se den.
+0|no|Gratulerer med bryllupsdagen! Bordet er bestilt klokken sju hos italieneren.
+0|no|Passordet ditt er endret. Hvis det ikke var deg, kontakt kundeservice via den offisielle nettsiden.
+0|no|Loppemarkedet er lørdag formiddag. Ta med stoler om du kan.
+0|no|Faktura 5532 er betalt i sin helhet. Ingen videre handling kreves.
+0|no|Obs: svindlere sender falske leveringsmeldinger. Ikke klikk på lenker fra ukjente avsendere.
+0|no|Kan du ta med skoene mine når du kommer innom i morgen?

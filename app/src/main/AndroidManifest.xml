@@ -1,0 +1,48 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- Used only by the optional DNS protection: forwarding allowed DNS lookups and reading the active network's resolver. No analytics, no account. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Package visibility for the "who can control or read this phone" list only: makes apps that offer these
+         high-power services visible so their names can be shown. No QUERY_ALL_PACKAGES. -->
+    <queries>
+        <intent><action android:name="android.accessibilityservice.AccessibilityService" /></intent>
+        <intent><action android:name="android.service.notification.NotificationListenerService" /></intent>
+        <intent><action android:name="android.view.InputMethod" /></intent>
+        <intent><action android:name="android.app.action.DEVICE_ADMIN_ENABLED" /></intent>
+        <intent><action android:name="android.provider.Telephony.SMS_DELIVER" /></intent>
+        <intent><action android:name="android.net.VpnService" /></intent>
+    </queries>
+    <application android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:label="Aegis AI Shield" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true" android:theme="@style/Theme.Aegis" android:usesCleartextTraffic="false">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+        <!-- Lint expects an exact-alarm permission with systemExempted; Android documents VPN apps as a separate qualifying case. Verify on device. -->
+        <service android:name=".AegisVpnService" android:exported="true" android:permission="android.permission.BIND_VPN_SERVICE"
+            android:foregroundServiceType="systemExempted" tools:ignore="ForegroundServicePermission">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+        <!-- Capability broker: carries out an allowed agent action (open a link, share text) from a ticket Aegis holds.
+             Not exported: reachable only through the one-shot, immutable launcher Aegis hands the agent. -->
+        <activity android:name=".BrokerActivity" android:exported="false" android:excludeFromRecents="true" android:noHistory="true"
+            android:taskAffinity="" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Voluntary AI-assistant interface (Messenger). Open to bind, but serves only apps the person paired; caller UID and signing certificate are checked on every call. -->
+        <service android:name=".AgentGatewayService" android:exported="true">
+            <intent-filter>
+                <action android:name="com.aegis.app.AGENT_FIREWALL" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

@@ -1,0 +1,2 @@
+STALE - DO NOT USE. This file listed checksums of the 0.2.0 source tree and referred to files that no longer exist
+(for example app/src/main/res/drawable/ic_aegis.xml). Checksums of the current deliverables are in dist/<version>/SHA256SUMS.txt.
