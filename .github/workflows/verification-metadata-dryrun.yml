@@ -30,6 +30,12 @@ jobs:
             :core:check :agent-sdk:check :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest \
             :agent-sdk-android:lintDebug :sample-agent:lintDebug :sample-agent:assembleDebug :app:lintRelease :app:assembleRelease || true
           cp gradle/verification-metadata.xml /tmp/linux-build.xml
+      # Hardware acceleration for the emulator (see the same step in android.yml).
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       # The emulator job resolves more (the instrumented-test runner). This also runs the instrumented tests.
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
