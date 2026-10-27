@@ -1,9 +1,10 @@
 name: Dependency checksums (Linux dry run)
-# Manual maintenance tool. Resolves every dependency the CI workflow needs on a Linux runner and writes the checksums
-# Gradle WOULD add to gradle/verification-metadata.xml into separate dry-run files, uploaded as an artifact. Nothing is
-# trusted or committed automatically: a person reviews the new entries (each must come from Google Maven or Maven
-# Central, the build's only repositories) and adds them by hand. Needed because the committed list was generated on
-# Windows and lacks Linux-only artifacts (for example aapt2's Linux build).
+# Manual maintenance tool. Runs every task the CI workflow runs on a Linux runner with checksum writing switched on, so
+# all dependencies are really resolved (Gradle's own --dry-run flag skips task execution and misses most of them). The
+# entries Gradle adds go only into this throwaway checkout and are uploaded as an artifact: nothing is committed or
+# trusted automatically. A person reviews the new entries (each must come from Google Maven, Maven Central or the
+# Gradle Plugin Portal, the build's only repositories) and adds them by hand. Needed because the committed list was
+# generated on Windows and lacks Linux-only artifacts (for example aapt2's Linux build).
 on: workflow_dispatch
 permissions:
   contents: read
@@ -23,23 +24,26 @@ jobs:
         with:
           gradle-version: '8.11.1'
       - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-      # Same tasks as the verify job. --dry-run writes gradle/verification-metadata.dryrun.xml and leaves the real file alone.
+      # Same tasks as the verify job; a failing task must not stop resolution of the others.
       - run: |
-          gradle --write-verification-metadata sha256 --dry-run --continue \
+          gradle --write-verification-metadata sha256 --continue \
             :core:check :agent-sdk:check :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest \
             :agent-sdk-android:lintDebug :sample-agent:lintDebug :sample-agent:assembleDebug :app:lintRelease :app:assembleRelease || true
-          cp gradle/verification-metadata.dryrun.xml /tmp/dryrun-build.xml
-      # The emulator job resolves more (the instrumented-test runner); run it on an emulator too.
+          cp gradle/verification-metadata.xml /tmp/linux-build.xml
+      # The emulator job resolves more (the instrumented-test runner). This also runs the instrumented tests.
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
           api-level: 35
           arch: x86_64
-          script: gradle --write-verification-metadata sha256 --dry-run --continue connectedDebugAndroidTest || true
-      - run: cp gradle/verification-metadata.dryrun.xml /tmp/dryrun-device.xml || true
+          script: gradle --write-verification-metadata sha256 --continue connectedDebugAndroidTest || true
+      - run: cp gradle/verification-metadata.xml /tmp/linux-device.xml
+        if: always()
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: verification-metadata-dryrun
+          name: verification-metadata-linux
           path: |
-            /tmp/dryrun-build.xml
-            /tmp/dryrun-device.xml
+            /tmp/linux-build.xml
+            /tmp/linux-device.xml
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
