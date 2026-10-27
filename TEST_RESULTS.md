@@ -2,8 +2,33 @@
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
 
-## Environment
-Windows 11, OpenJDK 17, Gradle 8.11.1 (wrapper), Android Gradle Plugin 8.9.2, Android SDK platform 36 / build-tools 36.0.0. Run from the developer's terminal. **No Android device or emulator was used.** CI (`.github/workflows/android.yml`) has **not** run yet: the project was put under git on 2026-10-28 and has no remote.
+## Update: first green CI and first emulator run (0.8.2-rc13, commit dbf6fe9)
+GitHub Actions run 40545185052 (private repository Enorm512/aegis-ai-shield), both jobs passed:
+- **verify** (ubuntu-latest): privacy check, `core/run-tests.sh` (all core and agent-SDK host tests, first time on Linux), icon check, API-26 scans of core and SDK, `:core:check :agent-sdk:check`, debug builds and lint of app, SDK client and sample agent, release lint and build, and `check_release_apk.py` on the unsigned release APK.
+- **device-smoke** (Android 15 / API 35 x86_64 emulator, KVM-accelerated): `DashboardSmokeTest`, **7 of 7 passed**:
+  - home screen and navigation render
+  - a benign link shows a qualified result
+  - a malformed link shows "couldn't assess", not "safe"
+  - shared text is checked automatically and shows advice
+  - sharing during a running check checks the new text
+  - the language and theme controls work
+  - a waiting agent request shows the banner and can be denied
+
+The first emulator runs found one real bug (shared text was not checked while a check was running; fixed in 0.8.2-rc13), three ambiguous test selectors, and CI setup problems (legacy SDK package, Windows-only dependency checksums, no KVM), all fixed.
+
+Still never run on Android, because no instrumented test covers it:
+- the VPN / DNS protection
+- the power watch
+- tripwire planting
+- the agent gateway, broker and tokens with a real second app
+- Keystore and `SealedStore`
+- the kill switch
+- reboot and process-death behaviour
+- battery
+- real phones and OEM skins
+
+## Environment (local results below)
+Windows 11, OpenJDK 17, Gradle 8.11.1 (wrapper), Android Gradle Plugin 8.9.2, Android SDK platform 36 / build-tools 36.0.0. Run from the developer's terminal; no Android device or emulator was used locally.
 
 ## Passed
 `gradlew :core:check :agent-sdk:check :app:assembleDebug :app:lintDebug :app:assembleDebugAndroidTest :agent-sdk-android:lintDebug :sample-agent:assembleDebug :sample-agent:lintDebug` — BUILD SUCCESSFUL.
@@ -37,17 +62,14 @@ Windows 11, OpenJDK 17, Gradle 8.11.1 (wrapper), Android Gradle Plugin 8.9.2, An
 
 Timing figures are single host-JVM runs on a development PC, not phone measurements.
 
-## Not executed (nothing below has ever run)
-- Any code on an Android device or emulator:
+## Not executed (as of the local run; see the update above for what CI has since covered)
+- Android code paths without an instrumented test:
   - the VPN / DNS protection
   - the power watch
   - tripwire planting
   - the agent gateway, broker and approval tokens
   - Keystore keys and `SealedStore`
   - the kill switch
-  - the UI
-- The seven instrumented tests in `DashboardSmokeTest`.
-- CI on any hosted runner.
 - Reboot, process death, Always-on VPN and Private DNS behaviour.
 - Battery, memory, CPU and startup measurements.
 - OEM compatibility (including Samsung One UI).
