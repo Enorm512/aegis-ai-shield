@@ -88,6 +88,7 @@ class AegisVpnService : VpnService() {
         val filter = DnsFilter(provider, Protection.lists)
         val app = applicationContext
         filter.setCanaries(Tripwires.load(app)) { token, name -> Tripwires.onTripped(app, token, name) }
+        filter.setAiLookupListener { service -> AgentWatch.onAiLookup(app, service) }
         val p = DnsProxy(filter, DnsUpstream.Plain({ upstream }, protector, 3000), { buf, n -> out.write(buf, 0, n) }, ADDR4, ADDR6, Clock.systemUTC())
         proxy = p
         Protection.proxy = p

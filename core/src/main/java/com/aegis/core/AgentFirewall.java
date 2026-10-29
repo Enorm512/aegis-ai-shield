@@ -76,6 +76,8 @@ public final class AgentFirewall {
     private static final class DenyWindow { final Instant start; int logged, suppressed; DenyWindow(Instant s) { start = s; } }
     private final Map<String, DenyWindow> denyWindows = new LinkedHashMap<>();
     private final Map<String, Instant> rateNotes = new LinkedHashMap<>();
+    /** Agents whose current session looks autonomous (AgentBehaviour): every action asks the person first. */
+    private final Set<String> paused = new HashSet<>();
     private long revision; // changes whenever anything that is saved changes; lets the app skip writes when nothing happened
     private long financialAutoLimit = 0; // any financial action needs approval by default
     private boolean lockdown;
@@ -155,6 +157,9 @@ public final class AgentFirewall {
 
     public synchronized void registerAgent(String agentId, Set<ActionType> permitted) { agents.put(agentId, EnumSet.copyOf(permitted.isEmpty() ? EnumSet.noneOf(ActionType.class) : permitted)); }
     /** Also drops that agent's waiting and approved-but-unused approvals: a removed agent keeps nothing it was granted. */
+    /** "Is this you?": while on, every request from this agent that would be allowed asks the person instead. */
+    public synchronized void setPaused(String agentId, boolean on) { if (agentId == null) return; if (on) paused.add(agentId); else paused.remove(agentId); }
+    public synchronized boolean paused(String agentId) { return paused.contains(agentId); }
     public synchronized void unregisterAgent(String agentId) { agents.remove(agentId); if (pending.values().removeIf(p -> p.agentId.equals(agentId))) revision++; }
     public synchronized void trustDestination(String domainOrHost) { trustedDestinations.add(domainOrHost.toLowerCase(Locale.ROOT)); }
     public synchronized void untrustDestination(String domainOrHost) { trustedDestinations.remove(domainOrHost.toLowerCase(Locale.ROOT)); }
@@ -237,6 +242,8 @@ public final class AgentFirewall {
         if (outbound && !trusted) ask.add(userDriven ? "UNTRUSTED_DESTINATION" : "UNTRUSTED_DESTINATION_WITHOUT_USER_INSTRUCTION");
         if (r.type() == ActionType.READ_SENSITIVE) ask.add(userDriven ? "SENSITIVE_READ" : "SENSITIVE_READ_WITHOUT_USER_INSTRUCTION");
 
+        // Last, so it never hides a refusal; it only turns what would have run silently into a question.
+        if (paused.contains(r.agentId())) ask.add("IS_THIS_YOU");
         if (!deny.isEmpty()) return new Decision(Verdict.DENY, dedupe(deny), null, kindNames);
         if (!ask.isEmpty()) {
             expire();

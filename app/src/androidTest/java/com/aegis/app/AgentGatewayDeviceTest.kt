@@ -110,6 +110,8 @@ class AgentGatewayDeviceTest {
     @Before fun clean() {
         AgentGateway.load(context)
         cleanUp()
+        // These tests make many quick calls, which the behaviour watch would rightly rate as automated; it has its own test below.
+        AgentWatch.enabled = false
     }
 
     @After fun cleanUp() {
@@ -119,6 +121,29 @@ class AgentGatewayDeviceTest {
         if (AgentGateway.paired.value.containsKey(self)) AgentGateway.unpair(context, self)
         AgentGateway.removeTrusted(context, trustedHost)
         AgentGateway.removeTrusted(context, "example.com")
+        AgentWatch.clearForTest()
+        AgentWatch.enabled = true
+    }
+
+    /** Behaviour watch through the real gateway: calls at machine pace pause the agent, "yes, that was me" lets it continue. */
+    @Test fun machinePacedAgentIsAskedIsThisYou() {
+        AgentWatch.enabled = true
+        AgentWatch.clearForTest()
+        pairSelf()
+        assertTrue(AgentGateway.addTrusted(context, trustedHost))
+        Client(context).use { c ->
+            // Eight calls far less than 4 s apart: the machine-pace rule.
+            val verdicts = (1..8).map { c.call(AegisProtocol.MSG_EVALUATE, request("SEND_DATA", "https://$trustedHost/v1", "note $it")) }
+            assertEquals("first calls allowed", AegisProtocol.VERDICT_ALLOW, verdicts.first().verdict())
+            val last = verdicts.last()
+            assertEquals(last.reasons().toString(), AegisProtocol.VERDICT_ASK_USER, last.verdict())
+            assertTrue("asks Is this you?", "IS_THIS_YOU" in last.reasons())
+            val session = AgentWatch.needsAnswer.value.single { it.actor() == self }
+            assertTrue(session.reasons().contains("MACHINE_PACE") || session.reasons().contains("WHILE_LOCKED"))
+            AgentWatch.confirm(context, session)
+            assertTrue(AgentWatch.needsAnswer.value.none { it.actor() == self })
+            assertEquals("confirmed session runs again", AegisProtocol.VERDICT_ALLOW, c.call(AegisProtocol.MSG_EVALUATE, request("SEND_DATA", "https://$trustedHost/v1", "after")).verdict())
+        }
     }
 
     @Test fun unpairedCallerIsRefusedAndAskedToPair() {

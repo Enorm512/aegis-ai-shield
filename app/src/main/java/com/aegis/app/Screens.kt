@@ -181,8 +181,10 @@ private fun HomeScreen(s: UiState, vm: AegisViewModel, tx: Tx, stats: State<Prot
     val lockdown by AgentGateway.lockdown.collectAsStateWithLifecycle()
     val audit by AgentGateway.audit.collectAsStateWithLifecycle()
     val incidents by Signals.incidents.collectAsStateWithLifecycle()
+    val agentQuestions by AgentWatch.needsAnswer.collectAsStateWithLifecycle()
     val items = buildList {
         incidents.forEach { i -> add(Attention(Signals.ruleText(i.rule(), tx.no), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) }) }
+        if (agentQuestions.isNotEmpty()) add(Attention(tx.t("Is this you? AI activity looked like it happened without you.", "Er dette deg? KI-aktivitet så ut til å skje uten deg."), tx.t("Answer", "Svar")) { vm.go(Screens.PROTECT) })
         if (powers.appChanges.isNotEmpty()) add(Attention(if (powers.appChanges.size == 1) tx.t("An app was added or replaced and should be checked.", "En app er lagt til eller byttet ut og bør sjekkes.") else tx.t("${powers.appChanges.size} app changes should be checked.", "${powers.appChanges.size} appendringer bør sjekkes."), tx.t("Review", "Se på")) { vm.go(Screens.PROTECT) })
         if (lockdown) add(Attention(tx.t("Emergency stop for AI agents is on: every agent request is refused.", "Nødstopp for KI-agenter er på: alle forespørsler fra agenter nektes."), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) })
         if (!audit.intactAtLoad) add(Attention(tx.t("The saved AI agent log was damaged or changed.", "Den lagrede KI-agentloggen var skadet eller endret."), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) })
@@ -329,6 +331,7 @@ private fun ProtectScreen(s: UiState, tx: Tx, stats: State<ProtectionStats>, run
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ScreenTitle(tx.t("Protection", "Beskyttelse"))
         LinkedWarningsCard(powers, tx, s.dark, context)
+        AgentActivityCard(powers, tx, s.dark, context, onUnpair)
         PowersCard(powers, tx, s.dark, context)
         TripwireCard(tripwires, running, tx, s.dark, context)
         val lockdown by AgentGateway.lockdown.collectAsStateWithLifecycle()
@@ -469,7 +472,7 @@ private fun MoreScreen(s: UiState, vm: AegisViewModel, tx: Tx, context: Context,
                 SectionTitle(tx.t("About Aegis", "Om Aegis"), icon = R.drawable.ic_info)
                 Text(tx.t("No account, no ads, no analytics, no saved scan history. Network access is used only by the optional DNS protection.", "Ingen konto, ingen reklame, ingen analyse, ingen lagret skannehistorikk. Nettverkstilgang brukes bare av den valgfrie DNS-beskyttelsen."), style = MaterialTheme.typography.bodyMedium)
                 Text(tx.t("Aegis finds evidence; it cannot guarantee safety. Local checks can miss threats and flag harmless things. Never share passwords or one-time codes.", "Aegis finner indikasjoner; den kan ikke garantere trygghet. Lokale sjekker kan overse trusler og flagge harmløse ting. Del aldri passord eller engangskoder."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(tx.t("Version 0.8.4-rc15 · preview build: DNS protection, the AI agent guard and the release build have not been tested on real devices yet.", "Versjon 0.8.4-rc15 · forhåndsversjon: DNS-beskyttelse, KI-agentvakten og utgivelsesbygget er ikke testet på ekte enheter ennå."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tx.t("Version 0.8.5-rc16 · preview build: DNS protection, the AI agent guard and the release build have not been tested on real devices yet.", "Versjon 0.8.5-rc16 · forhåndsversjon: DNS-beskyttelse, KI-agentvakten og utgivelsesbygget er ikke testet på ekte enheter ennå."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

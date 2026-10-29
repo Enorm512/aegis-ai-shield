@@ -124,6 +124,8 @@ class AgentGatewayService : Service() {
             val token = if (granted) token(request, ApprovalToken.GRANT_USER_APPROVED) else null
             return reply(to, MSG_REDEEMED, Bundle().apply { putBoolean(AegisProtocol.KEY_GRANTED, granted); if (token != null) putString(AegisProtocol.KEY_TOKEN, token) }, requestId)
         }
+        // Behaviour watch first, so a session that has just become autonomous already pauses this call ("Is this you?").
+        AgentWatch.onGatewayCall(this, pkg, request.type() != ActionType.MESSAGE_AGENT)
         val decision = AgentGateway.firewall.evaluate(request)
         if (decision.verdict() == Verdict.DENY) decision.reasons().firstOrNull()?.let { Signals.record(this, Correlator.Kind.AGENT_REFUSED, pkg, it) }
         if (decision.verdict() == Verdict.ASK_USER && decision.approvalId() != null) {
@@ -174,6 +176,7 @@ class AgentGatewayService : Service() {
                 return answer("DENY", listOf("LINK_CHECK_" + v.name))
             }
         }
+        AgentWatch.onGatewayCall(this, pkg, true)
         val decision = AgentGateway.firewall.evaluateBrokered(request)
         when (decision.verdict()) {
             Verdict.ALLOW -> {

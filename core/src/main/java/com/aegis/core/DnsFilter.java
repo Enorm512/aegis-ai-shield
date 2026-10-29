@@ -13,6 +13,8 @@ public final class DnsFilter {
     /** Called on the DNS thread when a tripwire name is looked up; must return quickly and never throw into the filter. */
     public interface CanaryListener { void tripped(CanaryTokens.Token token, String name); }
     public record Decision(Action action, Reason reason, ThreatDatabase.Entry entry, boolean warnOnly) {}
+    /** Called on the DNS thread when an AI model API is looked up (AgentBehaviour.aiService); must return quickly. */
+    public interface AiLookupListener { void looked(String service); }
 
     /** Connectivity-critical names a feed can never block (limits damage from a mistaken or compromised feed). */
     private static final Set<String> PROTECTED = Collections.unmodifiableSet(new HashSet<>(Arrays.asList("connectivitycheck.gstatic.com", "connectivitycheck.android.com", "clients3.google.com",
@@ -53,11 +55,13 @@ public final class DnsFilter {
     private volatile boolean blockSuspicious;
     private volatile CanaryTokens.Registry canaries;
     private volatile CanaryListener canaryListener;
+    private volatile AiLookupListener aiListener;
 
     public DnsFilter(ReputationProvider provider, DomainLists lists) { this.provider = provider; this.lists = lists; }
     public void setBlockSuspicious(boolean v) { blockSuspicious = v; }
     public DomainLists lists() { return lists; }
     public void setCanaries(CanaryTokens.Registry r, CanaryListener l) { canaries = r; canaryListener = l; }
+    public void setAiLookupListener(AiLookupListener l) { aiListener = l; }
 
     /** name must be lowercase ASCII as produced by DnsMessage.parseQuery. */
     public Decision decide(String name) {
@@ -71,6 +75,11 @@ public final class DnsFilter {
                 if (l != null) { try { l.tripped(t.get(), name); } catch (RuntimeException ignored) { } }
                 return new Decision(Action.BLOCK, Reason.CANARY, null, false);
             }
+        }
+        AiLookupListener ai = aiListener;
+        if (ai != null) {
+            String service = AgentBehaviour.aiService(name);
+            if (service != null) { try { ai.looked(service); } catch (RuntimeException ignored) { } }
         }
         if (lists.matches(lists.allow, name)) return new Decision(Action.ALLOW, Reason.USER_ALLOW, null, false);
         if (lists.matches(lists.block, name)) return new Decision(Action.BLOCK, Reason.USER_BLOCK, null, false);

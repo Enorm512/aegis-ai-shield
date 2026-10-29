@@ -1,4 +1,4 @@
-# Known limitations — 0.8.4-rc15 (internal test build)
+# Known limitations — 0.8.5-rc16 (internal test build)
 
 - **Never run on a real phone.** Since 0.8.2-rc13 the debug build runs instrumented tests on an Android 15 (API 35) x86_64 emulator in CI; see TEST_RESULTS.md for exactly what they cover. Still unverified: real phones and OEM skins (Samsung One UI etc.), other Android versions, battery and Doze, the release/R8 build at runtime, and every flow that needs a person in a system dialog (VPN consent, Contacts, share sheet, file picker). Older sections below that say "never run on a device" predate the emulator tests; where an emulator test now covers the behaviour, TEST_RESULTS.md says so.
 - No production threat feed or signing key, no signed updater or reputation backend, no redirect fetching, global AI control, app inventory or permanent detection history. An experimental text classifier (off by default), a consented DNS-only VPN filter and a voluntary agent firewall exist but are unverified on devices.
@@ -11,6 +11,13 @@
 - A hostile document provider can block inside read() and delay cancellation despite byte and coroutine checks. Process death can leave private temporary files until next cold start. Cache deletion can fail; device testing required.
 - UI localizes labels/explanations, but technical details/underlying parser evidence can remain English. No automated visual/TalkBack review yet.
 - SDK35 baseline is not a current Play compliance assertion. No release key, signed production APK, legal review, fully resolved SBOM or independent security certification.
+
+## Agent behaviour watch (0.8.5-rc16)
+- The ratings come from fixed, untuned rules (2 calls or 3 AI lookups while locked; 8+ calls averaging under 4 s; 10+ calls with a coefficient of variation under 0.25). No false-positive or detection rate has been measured; scheduled agents the person set up themselves are rated "on its own" by design and need one "yes, that was me" per session.
+- "Person present" means screen on and unlocked. An agent driving the phone through Accessibility while the person holds it, or a person using a computer that drives the phone, looks like the person.
+- AI-API lookups cannot be tied to an app on Android, are hidden by DNS caching, and are not seen at all when an app uses its own encrypted DNS, a VPN other than Aegis runs, or DNS protection is off. Only programmatic API hosts are listed; agents behind other proxies or self-hosted models are invisible, and an ordinary app calling an AI API in the background can trigger the question.
+- Agents that never call the Aegis gateway cannot be paused; for them Aegis can only ask and point at apps with screen control or notification access.
+- History is in memory only (24 hours, 3,000 events) and is lost when Android stops the app; an answered "yes" applies to that session only.
 
 ## Screenshot and QR check (0.8.4-rc15)
 - Tesseract with the fast models reads clean screenshots; photos of screens, small or stylised text, handwriting, low contrast and non-Latin scripts are read poorly or not at all. Only English and Norwegian models are shipped. Misread words can hide a warning sign or invent one; the text read is shown so the person can see it. No accuracy figure for text recognition on real screenshots exists.
