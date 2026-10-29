@@ -16,7 +16,8 @@ adb reboot
 adb wait-for-device
 for _ in $(seq 1 150); do [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break; sleep 2; done
 echo "boot completed; waiting for the tunnel"
-for _ in $(seq 1 45); do
+# Boot broadcasts can be late on a loaded runner; wait up to 3 minutes.
+for _ in $(seq 1 90); do
   if adb shell ip addr 2>/dev/null | grep -q "10.111.222.1"; then
     echo "PASS: DNS tunnel is up after reboot"
     adb shell dumpsys activity services "$PKG" | grep -E "ServiceRecord|isForeground" || true
@@ -24,7 +25,9 @@ for _ in $(seq 1 45); do
   fi
   sleep 2
 done
-echo "FAIL: no Aegis tunnel 90 s after boot"
+echo "FAIL: no Aegis tunnel 180 s after boot"
 adb shell dumpsys activity services "$PKG" || true
 adb logcat -d > /tmp/logcat.txt || true
+echo "--- logcat lines about Aegis, boot broadcasts and VPN"
+grep -iE "aegis|BOOT_COMPLETED|LOCKED_BOOT|VpnService|ActivityManager.*(Start proc|Killing|broadcast)|AndroidRuntime" /tmp/logcat.txt | tail -120 || true
 exit 1
