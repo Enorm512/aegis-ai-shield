@@ -12,7 +12,12 @@ adb shell am start -W -n "$PKG/com.aegis.app.MainActivity"
 adb shell am instrument -w -e class com.aegis.app.BootRestartSetup -e bootSetup 1 "$PKG.test/androidx.test.runner.AndroidJUnitRunner" | tee /tmp/setup.txt
 grep -q "OK (1 test)" /tmp/setup.txt
 
-adb reboot
+# Android saves package state (including "this app has been launched") and app-ops a few seconds after a change, and
+# `adb reboot` skips the orderly shutdown that would flush them. A failed run (40918864635) logged "Missing permission
+# state" for Aegis after boot and Aegis got no BOOT_COMPLETED, consistent with the app still looking never-launched.
+# So: give the system time to write, then reboot through the power manager like the power menu does.
+sleep 20
+adb shell svc power reboot || adb reboot
 adb wait-for-device
 for _ in $(seq 1 150); do [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break; sleep 2; done
 echo "boot completed; waiting for the tunnel"
