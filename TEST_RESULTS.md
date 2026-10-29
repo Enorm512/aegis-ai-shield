@@ -1,6 +1,12 @@
-# Observed validation — 29 October 2026, build 0.8.4-rc15
+# Observed validation — 29 October 2026, build 0.8.5-rc16
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
+
+## Update: 0.8.5-rc16 agent behaviour watch, GitHub Actions run 40924229215, all three jobs passed
+- **verify**: as before plus `AgentBehaviourTests` (48 checks: sessions, ratings, debouncing, bounds, the firewall's IS_THIS_YOU pause, the DNS filter's AI-lookup hook). Locally: lint 0 errors, 35 warnings.
+- **device-smoke**: **29 of 29 passed** (1 skipped on purpose; first seen in run 40918864635, same code). New: `AgentGatewayDeviceTest.machinePacedAgentIsAskedIsThisYou` (8 quick calls over the real Messenger interface: the first ALLOW, the last ASK_USER with IS_THIS_YOU; after "yes, that was me" the next call is ALLOW again); `AgentWatchDeviceTest` (AI lookups debounced and rated by screen state; 8 quick calls from an agent pause it, the Home item and the "Is this you?" card appear, and confirming in the UI unpauses it).
+- **boot-restart**: passed, tunnel up 8 s after boot. Two earlier runs failed (40912636439, 40918864635): BOOT_COMPLETED was delivered but Aegis was never started, and Android logged "Missing permission state" for Aegis. That fits the reboot coming seconds after install and first launch, before Android had saved that the app was launched, so the app still looked never-launched. The job now waits 20 s before `adb reboot`. An orderly `svc power reboot` was tried and left the CI emulator offline. One pass with the wait does not prove the cause.
+- Gateway tests of the policy itself switch the behaviour watch off (`AgentWatch.enabled = false`), because their many quick calls would rightly look automated.
 
 ## Update: 0.8.4-rc15 screenshot and QR check (commits d5c7e99 and a86d448), GitHub Actions run 40914461674, all three jobs passed
 - **verify**: as before plus `ImageCheckTests` (3,051 checks, 3,000 of them fuzz cases); privacy check now also pins the share targets and bans ML Kit/Firebase/Play services. Locally: lint 0 errors (36 warnings, mostly UseKtx/dependency-version notes); release gate's 16 KB alignment check passes for the new Tesseract native libraries (checked on the debug APK).
