@@ -1,6 +1,13 @@
-# Observed validation — 27 October 2026, build 0.8.3-rc14
+# Observed validation — 29 October 2026, build 0.8.4-rc15
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
+
+## Update: 0.8.4-rc15 screenshot and QR check (commits d5c7e99 and a86d448), GitHub Actions run 40914461674, all three jobs passed
+- **verify**: as before plus `ImageCheckTests` (3,051 checks, 3,000 of them fuzz cases); privacy check now also pins the share targets and bans ML Kit/Firebase/Play services. Locally: lint 0 errors (36 warnings, mostly UseKtx/dependency-version notes); release gate's 16 KB alignment check passes for the new Tesseract native libraries (checked on the debug APK).
+- **device-smoke** (Android 15 / API 35 x86_64 emulator): **26 of 26 passed** (1 skipped on purpose). New `ImageCheckDeviceTest` (5): Tesseract read the text and ZXing the Telegram sign-in QR from a 1080×1700 screenshot drawn at test time, judged STRONG with QR_DEVICE_LINK and SECRET_REQUEST (0.46 s); a dark-mode screenshot's text and light-on-dark QR were read (0.55 s); a blank picture is "unclear"; file:// and Aegis-own addresses are refused; a PNG inserted into the media store and shared to MainActivity was checked automatically and showed "Strong signs of a scam in this picture" with "Don't scan this QR code" (0.96 s).
+- **boot-restart**: passed, tunnel up about 10 s after boot. **The first run of this commit (40912636439) failed this job**: no tunnel within 90 s after reboot and no Aegis service running; no logcat was captured. The script now waits 3 minutes and prints Aegis and boot-broadcast logcat lines on failure. Cause unknown; treat restart-after-reboot as flaky until it is seen again or explained (1 failure in 3 runs so far).
+
+Limits of this evidence: the screenshots were drawn with Android's own sans-serif font at a large size, which is the easy case for OCR; no real-world screenshots, photos of screens, other fonts or languages; no OCR accuracy figure; timings are from the CI emulator, not a phone.
 
 ## Update: 0.8.3-rc14 (commit 01463b1), GitHub Actions run 40576139627, all three jobs passed
 - **verify**: as below, plus AppWatchTests (22 checks) and CorrelatorTests (32 checks); API-26 scan of core now 119 classes.
