@@ -1,6 +1,12 @@
-# Observed validation — 29 October 2026, build 0.8.6-rc17
+# Observed validation — 29 October 2026, build 0.8.7-rc18
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
+
+## Update: 0.8.7-rc18 read-only agents and per-kind stops (commit 29fa9c1), GitHub Actions run 40965514123, all three jobs passed
+- **verify**: as before plus `LimitTests` (46 checks: a stopped kind refused for every agent with only CAPABILITY_STOPPED, others untouched, agents kept; stops cancel waiting and approved-but-unused approvals of that kind and block redeeming them; brokered requests obey stops; unknown callers still get UNKNOWN_AGENT; read-only refuses every kind but READ_SENSITIVE, which still asks and can be used; it blocks a send approved before it; unpairing and the kill switch clear read-only, stops survive the kill switch; security-log entries, no duplicates, restore writes nothing, logs verify and round-trip).
+- **device-smoke**: 33 tests started, 0 failed (1 skipped on purpose, `BootRestartSetup`). New: `AgentGatewayDeviceTest.capabilityStopRefusesThatKindAndKeepsThePairing` and `readOnlyAgentMayOnlyAskToRead`, both over the real Messenger interface, including the saved preferences.
+- **boot-restart**: passed.
+- Not tested: the new "Stop one kind of action" card, the read-only switches and their confirmation dialogs were not looked at on screen.
 
 ## Update: 0.8.6-rc17 cross-step chain rules (commit 95499ce), GitHub Actions run 40943462646, all three jobs passed
 - **verify**: as before plus `ChainTests` (53 checks: send after an approved and used sensitive read, the per-host approval after it, refused/unused reads not counting, earlier hijack wording, the content-to-user provenance switch and its 2-minute window, card number and key split across sends to one host, refusals unchanged, the shown chain, bounds, unpairing and kill switch forgetting the session). One `AgentBehaviourTests` case now uses user provenance for its refused request, because the new provenance rule rightly asked on the following call.
