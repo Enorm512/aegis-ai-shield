@@ -66,6 +66,12 @@ object AgentGateway {
     private val mutableLockdown = MutableStateFlow(false)
     /** Kill switch: while on, every agent request is refused and no app can ask to pair. */
     val lockdown = mutableLockdown.asStateFlow()
+    private val mutableStopped = MutableStateFlow<Set<AgentFirewall.ActionType>>(emptySet())
+    /** Kinds of action the person stopped for every agent; requests of these kinds are refused until resumed. Pairings are kept. */
+    val stopped = mutableStopped.asStateFlow()
+    private val mutableReadOnly = MutableStateFlow<Set<String>>(emptySet())
+    /** Paired agents the person limited to asking for reads; everything else they ask is refused. */
+    val readOnly = mutableReadOnly.asStateFlow()
     private val mutableAudit = MutableStateFlow(AuditView())
     /** Capability broker: allowed actions waiting for the agent's one-shot launcher, and asked actions waiting for the person. Memory only. */
     val allowTickets = CapabilityBroker.Tickets(Clock.systemUTC())
@@ -108,6 +114,12 @@ object AgentGateway {
         val locked = app.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).getBoolean("lockdown", false)
         firewall.restoreLockdown(locked)
         mutableLockdown.value = locked
+        val state = app.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE)
+        val stops = state.getStringSet("stopped", emptySet()).orEmpty().mapNotNull { n -> AgentFirewall.ActionType.values().firstOrNull { it.name == n } }.toSet()
+        val ro = state.getStringSet("readonly", emptySet()).orEmpty().filter { it in raw.keys }.toSet()
+        firewall.restoreLimits(if (stops.isEmpty()) java.util.EnumSet.noneOf(AgentFirewall.ActionType::class.java) else java.util.EnumSet.copyOf(stops), ro)
+        mutableStopped.value = stops
+        mutableReadOnly.value = ro
         // Both logs first, so damage is noted before anything new is added. An unreadable file is reported as damaged, not treated as empty.
         fun text(r: SealedStore.Read): String? = when (r) { SealedStore.Read.Missing -> null; SealedStore.Read.Unreadable -> "unreadable"; is SealedStore.Read.Ok -> r.text }
         val intact = firewall.restoreLogs(text(SealedStore.read(app, AUDIT_FILE)), text(SealedStore.read(app, SECURITY_FILE)))
@@ -257,6 +269,7 @@ object AgentGateway {
         firewall.notePairing(pkg, AgentFirewall.Event.UNPAIRED, false)
         mutablePaired.value = mutablePaired.value - pkg
         mutableRisky.value = mutableRisky.value - pkg
+        if (pkg in mutableReadOnly.value) saveReadOnly(context, mutableReadOnly.value - pkg)
         mutableApprovals.value.filter { it.agent == pkg && it.broker.isNotEmpty() }.forEach { askTickets.take(it.id); brokerDone(it.id, false, "AGENT_REMOVED") }
         mutableApprovals.value = mutableApprovals.value.filterNot { it.agent == pkg }
         persist(context)
@@ -277,6 +290,7 @@ object AgentGateway {
         mutableLockdown.value = true
         mutablePaired.value = emptyMap()
         mutableRisky.value = emptySet()
+        saveReadOnly(app, emptySet())
         mutablePairings.value = emptyList()
         mutableApprovals.value = emptyList()
         AgentNotifier.clear(app)
@@ -291,6 +305,40 @@ object AgentGateway {
         app.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).edit().putBoolean("lockdown", false).apply()
         mutableLockdown.value = false
         persist(app)
+    }
+
+    /**
+     * Stops or resumes kinds of action for every agent. Saved before anything else, like the kill switch, so a stop
+     * survives the app being stopped. Waiting approvals of those kinds are cancelled (brokered ones told why).
+     */
+    @Synchronized fun setStopped(context: Context, types: Set<AgentFirewall.ActionType>, on: Boolean) {
+        val app = context.applicationContext
+        val next = if (on) mutableStopped.value + types else mutableStopped.value - types
+        app.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).edit().putStringSet("stopped", next.map { it.name }.toSet()).commit()
+        firewall.setStopped(types, on)
+        mutableStopped.value = next
+        if (on) dropApprovals("CAPABILITY_STOPPED") { it.type in types.map { t -> t.name } }
+        persist(app)
+    }
+
+    /** Read-only mode for one paired agent: it may still ask to read (you still approve), and everything else is refused. */
+    @Synchronized fun setReadOnly(context: Context, pkg: String, on: Boolean) {
+        if (pkg !in mutablePaired.value) return
+        val app = context.applicationContext
+        saveReadOnly(app, if (on) mutableReadOnly.value + pkg else mutableReadOnly.value - pkg)
+        firewall.setReadOnly(pkg, on)
+        if (on) dropApprovals("AGENT_READ_ONLY") { it.agent == pkg && it.type != AgentFirewall.ActionType.READ_SENSITIVE.name }
+        persist(app)
+    }
+
+    private fun saveReadOnly(context: Context, next: Set<String>) {
+        context.applicationContext.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).edit().putStringSet("readonly", next).commit()
+        mutableReadOnly.value = next
+    }
+
+    private fun dropApprovals(reason: String, which: (ApprovalItem) -> Boolean) {
+        mutableApprovals.value.filter { which(it) && it.broker.isNotEmpty() }.forEach { askTickets.take(it.id); brokerDone(it.id, false, reason) }
+        mutableApprovals.value = mutableApprovals.value.filterNot(which)
     }
 
     @Synchronized fun addApproval(item: ApprovalItem) {

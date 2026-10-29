@@ -179,6 +179,7 @@ private fun HomeScreen(s: UiState, vm: AegisViewModel, tx: Tx, stats: State<Prot
     val warn = levelStyle(Level.SUSPICIOUS, s.dark).accent
     val off = MaterialTheme.colorScheme.outline
     val lockdown by AgentGateway.lockdown.collectAsStateWithLifecycle()
+    val stoppedKinds by AgentGateway.stopped.collectAsStateWithLifecycle()
     val audit by AgentGateway.audit.collectAsStateWithLifecycle()
     val incidents by Signals.incidents.collectAsStateWithLifecycle()
     val agentQuestions by AgentWatch.needsAnswer.collectAsStateWithLifecycle()
@@ -187,6 +188,7 @@ private fun HomeScreen(s: UiState, vm: AegisViewModel, tx: Tx, stats: State<Prot
         if (agentQuestions.isNotEmpty()) add(Attention(tx.t("Is this you? AI activity looked like it happened without you.", "Er dette deg? KI-aktivitet så ut til å skje uten deg."), tx.t("Answer", "Svar")) { vm.go(Screens.PROTECT) })
         if (powers.appChanges.isNotEmpty()) add(Attention(if (powers.appChanges.size == 1) tx.t("An app was added or replaced and should be checked.", "En app er lagt til eller byttet ut og bør sjekkes.") else tx.t("${powers.appChanges.size} app changes should be checked.", "${powers.appChanges.size} appendringer bør sjekkes."), tx.t("Review", "Se på")) { vm.go(Screens.PROTECT) })
         if (lockdown) add(Attention(tx.t("Emergency stop for AI agents is on: every agent request is refused.", "Nødstopp for KI-agenter er på: alle forespørsler fra agenter nektes."), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) })
+        if (!lockdown && stoppedKinds.isNotEmpty()) add(Attention(tx.t("Some kinds of AI agent action are stopped for every agent.", "Noen typer KI-agenthandlinger er stoppet for alle agenter."), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) })
         if (!audit.intactAtLoad) add(Attention(tx.t("The saved AI agent log was damaged or changed.", "Den lagrede KI-agentloggen var skadet eller endret."), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) })
         if (waiting > 0) add(Attention(if (waiting == 1) tx.t("An AI agent is waiting for your decision.", "En KI-agent venter på avgjørelsen din.") else tx.t("$waiting AI agent requests are waiting for your decision.", "$waiting forespørsler fra KI-agenter venter på deg."), tx.t("Review", "Se på"), onReview))
         if (tripwires.trips.any { !it.test }) add(Attention(tx.t("A tripwire was triggered: something tried to use your decoy data.", "En snubletråd er utløst: noe prøvde å bruke lokkedataene dine."), tx.t("View", "Vis")) { vm.go(Screens.PROTECT) })
@@ -337,6 +339,9 @@ private fun ProtectScreen(s: UiState, tx: Tx, stats: State<ProtectionStats>, run
         val lockdown by AgentGateway.lockdown.collectAsStateWithLifecycle()
         val audit by AgentGateway.audit.collectAsStateWithLifecycle()
         KillSwitchCard(lockdown, paired.size, powers, tx, s.dark, context)
+        val stopped by AgentGateway.stopped.collectAsStateWithLifecycle()
+        val readOnly by AgentGateway.readOnly.collectAsStateWithLifecycle()
+        if (!lockdown) CapabilityStopsCard(stopped, tx, context)
         Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -386,7 +391,10 @@ private fun ProtectScreen(s: UiState, tx: Tx, stats: State<ProtectionStats>, run
                 if (waiting > 0) Button(onClick = onReview, Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(tx.t("Review $waiting waiting request(s)", "Se på $waiting ventende forespørsel(er)")) }
                 else Text(tx.t("Nothing waiting.", "Ingenting venter."), style = MaterialTheme.typography.bodySmall)
                 if (paired.isEmpty()) Text(tx.t("No apps connected. An assistant app that supports Aegis will ask to connect, and you decide.", "Ingen apper er koblet til. En assistent-app som støtter Aegis vil be om å koble til, og du bestemmer."), style = MaterialTheme.typography.bodySmall)
-                paired.forEach { pkg -> Row(verticalAlignment = Alignment.CenterVertically) { Text(pkg, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall); TextButton(onClick = { onUnpair(pkg) }) { Text(tx.t("Remove", "Fjern")) } } }
+                paired.forEach { pkg ->
+                    Row(verticalAlignment = Alignment.CenterVertically) { Text(pkg, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall); TextButton(onClick = { onUnpair(pkg) }) { Text(tx.t("Remove", "Fjern")) } }
+                    ReadOnlyRow(pkg, pkg in readOnly, tx, context)
+                }
                 var trustInput by remember { mutableStateOf("") }
                 var trustError by remember { mutableStateOf(false) }
                 Text(tx.t("Trusted destinations", "Betrodde mottakere"), style = MaterialTheme.typography.titleSmall)

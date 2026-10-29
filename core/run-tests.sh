@@ -24,6 +24,7 @@ trap 'rm -rf "$build_dir"' EXIT
 "$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.ImageCheckTests
 "$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.AgentBehaviourTests
 "$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.ChainTests
+"$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.LimitTests
 "$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.CanaryTests
 "$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.AgentShieldTests
 "$java_cmd" -Dfile.encoding=UTF-8 -cp "$build_dir" com.aegis.core.BrokerTests

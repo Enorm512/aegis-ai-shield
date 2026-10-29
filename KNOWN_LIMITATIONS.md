@@ -1,4 +1,4 @@
-# Known limitations — 0.8.6-rc17 (internal test build)
+# Known limitations — 0.8.7-rc18 (internal test build)
 
 - **Never run on a real phone.** Since 0.8.2-rc13 the debug build runs instrumented tests on an Android 15 (API 35) x86_64 emulator in CI; see TEST_RESULTS.md for exactly what they cover. Still unverified: real phones and OEM skins (Samsung One UI etc.), other Android versions, battery and Doze, the release/R8 build at runtime, and every flow that needs a person in a system dialog (VPN consent, Contacts, share sheet, file picker). Older sections below that say "never run on a device" predate the emulator tests; where an emulator test now covers the behaviour, TEST_RESULTS.md says so.
 - No production threat feed or signing key, no signed updater or reputation backend, no redirect fetching, global AI control, app inventory or permanent detection history. An experimental text classifier (off by default), a consented DNS-only VPN filter and a voluntary agent firewall exist but are unverified on devices.
@@ -11,6 +11,12 @@
 - A hostile document provider can block inside read() and delay cancellation despite byte and coroutine checks. Process death can leave private temporary files until next cold start. Cache deletion can fail; device testing required.
 - UI localizes labels/explanations, but technical details/underlying parser evidence can remain English. No automated visual/TalkBack review yet.
 - SDK35 baseline is not a current Play compliance assertion. No release key, signed production APK, legal review, fully resolved SBOM or independent security certification.
+
+## Read-only mode and per-kind stops (0.8.7-rc18)
+- Like the rest of the gateway, they only limit what agents ask Aegis about. An agent that acts without asking (its own network access, Accessibility, other apps) is not stopped; only the full emergency stop's list of Accessibility and notification-access apps points at that.
+- "Read only" means the agent may only ask for `READ_SENSITIVE`; Aegis has no way to know whether an agent's own work is read-only.
+- The grouping of kinds in the card is fixed. Stopping "Sending" also stops sharing files and messaging other agents.
+- The new card and switches have not been looked at on screen; only the gateway behaviour is tested (host and emulator).
 
 ## Cross-step chain rules (0.8.6-rc17)
 - Fixed rules with fixed windows (10-minute session gap, 2-minute provenance switch, 2,000-character tail per host). No false-positive rate has been measured; an agent that legitimately reads and then sends will ask more often.

@@ -41,14 +41,19 @@ public final class AgentFirewall {
         /** Denials beyond the per-minute logging budget for one agent, summarised as one entry (reason NOT_LOGGED_n). */
         DENIALS_SUMMARISED,
         /** An agent hit the request rate limit (security log; at most once per agent per 10 minutes). */
-        RATE_LIMIT_HIT }
+        RATE_LIMIT_HIT,
+        /** The person stopped or resumed kinds of action for every agent (reasons = the action types). */
+        CAPABILITY_STOPPED, CAPABILITY_RESUMED,
+        /** The person put one agent in read-only mode, or took it out. */
+        READ_ONLY_ON, READ_ONLY_OFF }
 
     /**
      * Events that are also written to the separate security log, which ordinary request traffic cannot rotate away:
      * changes the person made, the kill switch, log damage and rate-limit hits. All are bounded by human action or throttled.
      */
     private static final Set<Event> SECURITY_EVENTS = Collections.unmodifiableSet(EnumSet.of(Event.PAIRED, Event.PAIR_REJECTED, Event.UNPAIRED,
-        Event.KILL_SWITCH_ON, Event.KILL_SWITCH_OFF, Event.LOG_DAMAGED, Event.USER_APPROVED, Event.USER_DENIED, Event.RATE_LIMIT_HIT));
+        Event.KILL_SWITCH_ON, Event.KILL_SWITCH_OFF, Event.LOG_DAMAGED, Event.USER_APPROVED, Event.USER_DENIED, Event.RATE_LIMIT_HIT,
+        Event.CAPABILITY_STOPPED, Event.CAPABILITY_RESUMED, Event.READ_ONLY_ON, Event.READ_ONLY_OFF));
     public static final int MAX_SECURITY = 300;
     /** Denials logged individually per agent per minute; the rest are counted and summarised. */
     public static final int DENIALS_LOGGED_PER_MINUTE = 5;
@@ -103,6 +108,9 @@ public final class AgentFirewall {
     /** Agents whose current session looks autonomous (AgentBehaviour): every action asks the person first. */
     private final Set<String> paused = new HashSet<>();
     private final Map<String, Trail> trails = new LinkedHashMap<>();
+    /** Emergency stops per kind of action, for every agent; and agents the person limited to reading. Both refuse, never ask. */
+    private final Set<ActionType> stopped = EnumSet.noneOf(ActionType.class);
+    private final Set<String> readOnly = new HashSet<>();
     private long revision; // changes whenever anything that is saved changes; lets the app skip writes when nothing happened
     private long financialAutoLimit = 0; // any financial action needs approval by default
     private boolean lockdown;
@@ -153,7 +161,7 @@ public final class AgentFirewall {
     public synchronized List<String> killSwitch() {
         List<String> was = new ArrayList<>(new TreeSet<>(agents.keySet()));
         flushDenials(true);
-        agents.clear(); pending.clear(); recent.clear(); trails.clear();
+        agents.clear(); pending.clear(); recent.clear(); trails.clear(); readOnly.clear();
         lockdown = true;
         append(Event.KILL_SWITCH_ON, "", null, "", null, Collections.singletonList("AGENTS_REMOVED_" + was.size()));
         return was;
@@ -162,6 +170,45 @@ public final class AgentFirewall {
     /** Restores the switch state at start-up without writing an audit entry (the entry was written when it was flipped). */
     public synchronized void restoreLockdown(boolean on) { lockdown = on; if (on) { agents.clear(); pending.clear(); trails.clear(); } }
     public synchronized boolean lockdown() { return lockdown; }
+
+    /**
+     * Stops (on = true) or resumes these kinds of action for every agent. A stop also cancels waiting and
+     * approved-but-unused approvals of those kinds, and stays until the person resumes it. Pairings are kept.
+     */
+    public synchronized void setStopped(Set<ActionType> types, boolean on) {
+        Set<ActionType> change = EnumSet.noneOf(ActionType.class);
+        for (ActionType t : types) if (t != null && stopped.contains(t) != on) change.add(t);
+        if (change.isEmpty()) return;
+        if (on) { stopped.addAll(change); pending.values().removeIf(p -> change.contains(p.type)); }
+        else stopped.removeAll(change);
+        List<String> names = new ArrayList<>(); for (ActionType t : change) names.add(t.name());
+        append(on ? Event.CAPABILITY_STOPPED : Event.CAPABILITY_RESUMED, "", null, "", null, names);
+    }
+    public synchronized Set<ActionType> stopped() { return Collections.unmodifiableSet(EnumSet.copyOf(stopped.isEmpty() ? EnumSet.noneOf(ActionType.class) : stopped)); }
+
+    /**
+     * Read-only mode for one agent: it may still ask to read (which asks the person as before), and everything else is
+     * refused. Turning it on cancels the agent's waiting and approved-but-unused approvals for anything but reading.
+     */
+    public synchronized void setReadOnly(String agentId, boolean on) {
+        if (agentId == null || readOnly.contains(agentId) == on) return;
+        if (on) { readOnly.add(agentId); pending.values().removeIf(p -> p.agentId.equals(agentId) && p.type != ActionType.READ_SENSITIVE); }
+        else readOnly.remove(agentId);
+        append(on ? Event.READ_ONLY_ON : Event.READ_ONLY_OFF, agentId, null, "", null, Collections.emptyList());
+    }
+    public synchronized boolean readOnly(String agentId) { return readOnly.contains(agentId); }
+
+    /** Restores the stops and read-only agents at start-up without writing audit entries (they were written when set). */
+    public synchronized void restoreLimits(Set<ActionType> stoppedTypes, Set<String> readOnlyAgents) {
+        stopped.clear(); stopped.addAll(stoppedTypes);
+        readOnly.clear(); readOnly.addAll(readOnlyAgents);
+    }
+
+    private String limitRefusal(String agentId, ActionType type) {
+        if (stopped.contains(type)) return "CAPABILITY_STOPPED";
+        if (readOnly.contains(agentId) && type != ActionType.READ_SENSITIVE) return "AGENT_READ_ONLY";
+        return null;
+    }
 
     /** The broker records whether it carried out an action (reason codes only, never the content). */
     public synchronized void noteBroker(String agentId, ActionType type, String destination, boolean performed, String reason) {
@@ -185,7 +232,7 @@ public final class AgentFirewall {
     public synchronized void setPaused(String agentId, boolean on) { if (agentId == null) return; if (on) paused.add(agentId); else paused.remove(agentId); }
     public synchronized boolean paused(String agentId) { return paused.contains(agentId); }
     /** Also drops that agent's waiting and approved-but-unused approvals and its session: a removed agent keeps nothing it was granted. */
-    public synchronized void unregisterAgent(String agentId) { agents.remove(agentId); trails.remove(agentId); if (pending.values().removeIf(p -> p.agentId.equals(agentId))) revision++; }
+    public synchronized void unregisterAgent(String agentId) { agents.remove(agentId); trails.remove(agentId); readOnly.remove(agentId); if (pending.values().removeIf(p -> p.agentId.equals(agentId))) revision++; }
     public synchronized void trustDestination(String domainOrHost) { trustedDestinations.add(domainOrHost.toLowerCase(Locale.ROOT)); }
     public synchronized void untrustDestination(String domainOrHost) { trustedDestinations.remove(domainOrHost.toLowerCase(Locale.ROOT)); }
     /** True for a plain host name the person may trust: 2+ labels of letters, digits and hyphens, not an IP address, at most 253 characters. */
@@ -243,6 +290,8 @@ public final class AgentFirewall {
         Set<ActionType> permitted = agents.get(r.agentId());
         if (permitted == null) return deny("UNKNOWN_AGENT");
         if (!permitted.contains(r.type())) return deny("ACTION_NOT_PERMITTED_FOR_AGENT");
+        String limit = limitRefusal(r.agentId(), r.type());
+        if (limit != null) return deny(limit);
         Deque<Instant> window = recent.computeIfAbsent(r.agentId(), k -> new ArrayDeque<>());
         Instant now = clock.instant();
         while (!window.isEmpty() && window.peekFirst().isBefore(now.minusSeconds(60))) window.removeFirst();
@@ -338,6 +387,7 @@ public final class AgentFirewall {
     private void track(Request r, Scan scan, Decision d) {
         if (r == null || r.agentId() == null || r.type() == null || r.provenance() == null || !agents.containsKey(r.agentId())) return;
         if (d.reasons().contains("RATE_LIMITED") || d.reasons().contains("KILL_SWITCH_ON")) return;
+        if (d.reasons().contains("CAPABILITY_STOPPED") || d.reasons().contains("AGENT_READ_ONLY")) return; // the person's limit, not the agent's step
         Instant now = clock.instant();
         Trail t = trailFor(r.agentId(), now);
         String host = safeHost(hostOf(r.destination()));
@@ -403,6 +453,7 @@ public final class AgentFirewall {
         ActionType type = r == null ? null : r.type();
         String host = r == null ? "" : hostOf(r.destination());
         String refused = lockdown ? "KILL_SWITCH_ON" : p == null ? "UNKNOWN_OR_EXPIRED_APPROVAL" : !agents.containsKey(p.agentId) ? "AGENT_NOT_PAIRED" : p.brokered != broker ? (broker ? "NOT_A_BROKERED_APPROVAL" : "BROKERED_ACTION")
+            : limitRefusal(p.agentId, p.type) != null ? limitRefusal(p.agentId, p.type)
             : p.used || !Boolean.TRUE.equals(p.approved) ? "NOT_APPROVED"
             : r == null || !p.agentId.equals(r.agentId()) || !p.hash.equals(requestHash(r)) ? "REQUEST_CHANGED" : null;
         if (refused != null) { append(Event.REDEEM_REFUSED, agent, type, host, null, Collections.singletonList(refused)); return false; }

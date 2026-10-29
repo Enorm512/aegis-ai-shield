@@ -116,6 +116,8 @@ class AgentGatewayDeviceTest {
 
     @After fun cleanUp() {
         if (AgentGateway.lockdown.value) AgentGateway.releaseKillSwitch(context)
+        if (AgentGateway.stopped.value.isNotEmpty()) AgentGateway.setStopped(context, AgentGateway.stopped.value, false)
+        if (self in AgentGateway.readOnly.value) AgentGateway.setReadOnly(context, self, false)
         AgentGateway.approvals.value.forEach { AgentGateway.resolve(context, it.id, false) }
         AgentGateway.pairings.value.forEach { AgentGateway.rejectPairing(context, it) }
         if (AgentGateway.paired.value.containsKey(self)) AgentGateway.unpair(context, self)
@@ -213,6 +215,44 @@ class AgentGatewayDeviceTest {
             assertTrue("CHAIN_PRIVATE_READ_THEN_SEND" in after.reasons())
             val item = AgentGateway.approvals.value.single { it.id == after.getString(AegisProtocol.KEY_APPROVAL_ID) }
             assertEquals(listOf("SEND_DATA|$trustedHost|ALLOWED|0", "READ_SENSITIVE||APPROVED|0"), item.chain)
+        }
+    }
+
+    @Test fun capabilityStopRefusesThatKindAndKeepsThePairing() {
+        pairSelf()
+        assertTrue(AgentGateway.addTrusted(context, trustedHost))
+        val send = { request("SEND_DATA", "https://$trustedHost/v1", "note") }
+        Client(context).use { c ->
+            val waiting = c.call(AegisProtocol.MSG_EVALUATE, request("SHARE_FILE", "https://other.example.net/x", "file"))
+            assertEquals(AegisProtocol.VERDICT_ASK_USER, waiting.verdict())
+            val sending = setOf(AgentFirewall.ActionType.SEND_DATA, AgentFirewall.ActionType.SHARE_FILE, AgentFirewall.ActionType.MESSAGE_AGENT)
+            AgentGateway.setStopped(context, sending, true)
+            assertTrue("saved for a restart", context.getSharedPreferences("agent_state", Context.MODE_PRIVATE).getStringSet("stopped", emptySet())!!.containsAll(sending.map { it.name }))
+            assertTrue("waiting request of that kind cancelled", AgentGateway.approvals.value.none { it.id == waiting.getString(AegisProtocol.KEY_APPROVAL_ID) })
+            val r = c.call(AegisProtocol.MSG_EVALUATE, send())
+            assertEquals(AegisProtocol.VERDICT_DENY, r.verdict())
+            assertEquals(listOf("CAPABILITY_STOPPED"), r.reasons())
+            assertEquals("still paired", AgentGateway.Status.PAIRED, AgentGateway.status(self, AgentGateway.signerDigest(context.packageManager, self)!!))
+            assertEquals("other kinds still ask", AegisProtocol.VERDICT_ASK_USER, c.call(AegisProtocol.MSG_EVALUATE, request("READ_SENSITIVE", "", "")).verdict())
+            AgentGateway.setStopped(context, sending, false)
+            assertEquals(AegisProtocol.VERDICT_ALLOW, c.call(AegisProtocol.MSG_EVALUATE, send()).verdict())
+            assertTrue(events().containsAll(listOf(AgentFirewall.Event.CAPABILITY_STOPPED, AgentFirewall.Event.CAPABILITY_RESUMED)))
+        }
+    }
+
+    @Test fun readOnlyAgentMayOnlyAskToRead() {
+        pairSelf()
+        assertTrue(AgentGateway.addTrusted(context, trustedHost))
+        Client(context).use { c ->
+            AgentGateway.setReadOnly(context, self, true)
+            assertTrue(self in AgentGateway.readOnly.value)
+            val r = c.call(AegisProtocol.MSG_EVALUATE, request("SEND_DATA", "https://$trustedHost/v1", "note"))
+            assertEquals(AegisProtocol.VERDICT_DENY, r.verdict())
+            assertEquals(listOf("AGENT_READ_ONLY"), r.reasons())
+            assertEquals("reads still ask the person", AegisProtocol.VERDICT_ASK_USER, c.call(AegisProtocol.MSG_EVALUATE, request("READ_SENSITIVE", "", "")).verdict())
+            AgentGateway.unpair(context, self)
+            assertFalse("unpairing clears read only", self in AgentGateway.readOnly.value)
+            assertFalse(context.getSharedPreferences("agent_state", Context.MODE_PRIVATE).getStringSet("readonly", emptySet())!!.contains(self))
         }
     }
 

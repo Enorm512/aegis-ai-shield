@@ -225,6 +225,69 @@ fun KillSwitchCard(lockdown: Boolean, pairedCount: Int, powers: PowerState, tx: 
         dismissButton = { Button(onClick = { confirmOff = false }) { Text(tx.t("Keep it on", "Behold den på")) } })
 }
 
+/** One emergency stop per kind of action, for every agent at once. The groups match what the person would recognise. */
+private val stopGroups: List<Pair<Set<AgentFirewall.ActionType>, Pair<String, String>>> = listOf(
+    setOf(AgentFirewall.ActionType.SEND_DATA, AgentFirewall.ActionType.SHARE_FILE, AgentFirewall.ActionType.MESSAGE_AGENT) to ("Sending data, files or messages" to "Sende data, filer eller meldinger"),
+    setOf(AgentFirewall.ActionType.READ_SENSITIVE) to ("Reading private data" to "Lese private data"),
+    setOf(AgentFirewall.ActionType.FINANCIAL_TRANSACTION) to ("Payments" to "Betalinger"),
+    setOf(AgentFirewall.ActionType.INSTALL_APP) to ("Installing apps" to "Installere apper"),
+    setOf(AgentFirewall.ActionType.EXECUTE_COMMAND) to ("Running commands" to "Kjøre kommandoer"),
+    setOf(AgentFirewall.ActionType.USE_CREDENTIAL) to ("Using saved passwords and keys" to "Bruke lagrede passord og nøkler"),
+    setOf(AgentFirewall.ActionType.MODIFY_SETTINGS) to ("Changing settings" to "Endre innstillinger"))
+
+/**
+ * Stops for single kinds of action. Stopping takes one tap and refuses that kind for every agent while keeping them
+ * connected; allowing it again is confirmed, like ending the full emergency stop.
+ */
+@Composable
+fun CapabilityStopsCard(stopped: Set<AgentFirewall.ActionType>, tx: Tx, context: Context) {
+    var confirmResume by remember { mutableStateOf<Set<AgentFirewall.ActionType>?>(null) }
+    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            SectionTitle(tx.t("Stop one kind of action", "Stopp én type handling"), icon = R.drawable.ic_lock)
+            Text(tx.t("Switch one on to refuse that kind of request from every AI agent, without disconnecting them. Waiting requests of that kind are cancelled.",
+                "Slå på en bryter for å nekte den typen forespørsel fra alle KI-agenter, uten å koble dem fra. Ventende forespørsler av den typen avbrytes."),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            stopGroups.forEach { (types, label) ->
+                val on = types.all { it in stopped }
+                Row(Modifier.fillMaxWidth().toggleable(value = on, role = Role.Switch, onValueChange = { want ->
+                    if (want) AgentGateway.setStopped(context, types, true) else confirmResume = types
+                }).heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tx.t(label.first, label.second), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
+                    if (on) Text(tx.t("Stopped", "Stoppet"), Modifier.padding(end = 8.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+                    Switch(checked = on, onCheckedChange = null)
+                }
+            }
+        }
+    }
+    confirmResume?.let { types ->
+        AlertDialog(onDismissRequest = { confirmResume = null },
+            title = { Text(tx.t("Allow this again?", "Tillate dette igjen?")) },
+            text = { GuardFromAccessibilityApps(); Text(tx.t("Connected agents can then ask for this again. Aegis still checks each request and asks you when it should.", "Tilkoblede agenter kan da be om dette igjen. Aegis sjekker fortsatt hver forespørsel og spør deg når den skal.")) },
+            confirmButton = { OutlinedButton(onClick = { AgentGateway.setStopped(context, types, false); confirmResume = null }) { Text(tx.t("Allow again", "Tillat igjen")) } },
+            dismissButton = { Button(onClick = { confirmResume = null }) { Text(tx.t("Keep it stopped", "Behold stoppet")) } })
+    }
+}
+
+/** Read-only switch for one connected agent. Turning it on takes one tap; turning it off is confirmed. */
+@Composable
+fun ReadOnlyRow(pkg: String, on: Boolean, tx: Tx, context: Context) {
+    var confirmOff by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().toggleable(value = on, role = Role.Switch, onValueChange = { want -> if (want) AgentGateway.setReadOnly(context, pkg, true) else confirmOff = true }).heightIn(min = 48.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(tx.t("Read only", "Bare lesing"), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+            Text(tx.t("May only ask to read; sending, paying, installing and the rest are refused.", "Kan bare be om å lese; sending, betaling, installering og resten nektes."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = on, onCheckedChange = null)
+    }
+    if (confirmOff) AlertDialog(onDismissRequest = { confirmOff = false },
+        title = { Text(tx.t("Turn off read only?", "Slå av bare lesing?")) },
+        text = { GuardFromAccessibilityApps(); Text(tx.t("$pkg can then ask for everything it was allowed when it connected. Aegis still checks each request.", "$pkg kan da be om alt den fikk lov til da den koblet til. Aegis sjekker fortsatt hver forespørsel.")) },
+        confirmButton = { OutlinedButton(onClick = { AgentGateway.setReadOnly(context, pkg, false); confirmOff = false }) { Text(tx.t("Turn off", "Slå av")) } },
+        dismissButton = { Button(onClick = { confirmOff = false }) { Text(tx.t("Keep it on", "Behold den på")) } })
+}
+
 private fun eventText(e: AgentFirewall.AuditEntry, tx: Tx): String {
     val what = e.type()?.name?.lowercase()?.replace('_', ' ') ?: ""
     val to = if (e.destinationHost().isNotEmpty()) " → " + e.destinationHost() else ""
@@ -249,6 +312,10 @@ private fun eventText(e: AgentFirewall.AuditEntry, tx: Tx): String {
         Event.BROKER_PERFORMED -> tx.t("Aegis carried out", "Aegis utførte") + ": $what$to"
         Event.BROKER_FAILED -> tx.t("Aegis did not carry out", "Aegis utførte ikke") + ": $what$to"
         Event.LOG_DAMAGED -> tx.t("Saved log was damaged or changed; started a new one", "Lagret logg var skadet eller endret; startet en ny")
+        Event.CAPABILITY_STOPPED -> tx.t("You stopped for all agents", "Du stoppet for alle agenter") + ": " + e.reasons().joinToString { it.lowercase().replace('_', ' ') }
+        Event.CAPABILITY_RESUMED -> tx.t("You allowed again for all agents", "Du tillot igjen for alle agenter") + ": " + e.reasons().joinToString { it.lowercase().replace('_', ' ') }
+        Event.READ_ONLY_ON -> tx.t("Set to read only", "Satt til bare lesing")
+        Event.READ_ONLY_OFF -> tx.t("Read only turned off", "Bare lesing slått av")
     }
 }
 
