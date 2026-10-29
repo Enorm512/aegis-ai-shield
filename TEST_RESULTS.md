@@ -1,6 +1,12 @@
-# Observed validation — 29 October 2026, build 0.8.5-rc16
+# Observed validation — 29 October 2026, build 0.8.6-rc17
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
+
+## Update: 0.8.6-rc17 cross-step chain rules (commit 95499ce), GitHub Actions run 40943462646, all three jobs passed
+- **verify**: as before plus `ChainTests` (53 checks: send after an approved and used sensitive read, the per-host approval after it, refused/unused reads not counting, earlier hijack wording, the content-to-user provenance switch and its 2-minute window, card number and key split across sends to one host, refusals unchanged, the shown chain, bounds, unpairing and kill switch forgetting the session). One `AgentBehaviourTests` case now uses user provenance for its refused request, because the new provenance rule rightly asked on the following call.
+- **device-smoke**: 31 tests started, the job passed (1 skipped on purpose, `BootRestartSetup`). New: `AgentGatewayDeviceTest.sendAfterApprovedReadAsksAndShowsTheChain` (over the real Messenger interface: a send to a trusted host is ALLOW; a sensitive read is asked, approved and redeemed; the same send then is ASK_USER with CHAIN_PRIVATE_READ_THEN_SEND, and the waiting approval carries the two earlier steps).
+- **boot-restart**: passed.
+- Not tested: the approval dialog's new "What this agent did just before" list was not looked at on screen; no false-positive rate for the chain rules.
 
 ## Update: 0.8.5-rc16 agent behaviour watch, GitHub Actions run 40924229215, all three jobs passed
 - **verify**: as before plus `AgentBehaviourTests` (48 checks: sessions, ratings, debouncing, bounds, the firewall's IS_THIS_YOU pause, the DNS filter's AI-lookup hook). Locally: lint 0 errors, 35 warnings.
