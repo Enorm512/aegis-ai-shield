@@ -18,7 +18,10 @@ grep -q "OK (1 test)" /tmp/setup.txt
 # So: give the system time to write, then reboot through the power manager like the power menu does.
 sleep 20
 adb shell svc power reboot || adb reboot
-adb wait-for-device
+# The orderly reboot returns before the device goes down: wait for the old boot to end, then for the device to come
+# back, tolerating "device offline" while the emulator restarts.
+for _ in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '')" = "1" ] || break; sleep 2; done
+for _ in $(seq 1 60); do adb wait-for-device 2>/dev/null && break; sleep 3; done
 for _ in $(seq 1 150); do [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break; sleep 2; done
 echo "boot completed; waiting for the tunnel"
 # Boot broadcasts can be late on a loaded runner; wait up to 3 minutes.
