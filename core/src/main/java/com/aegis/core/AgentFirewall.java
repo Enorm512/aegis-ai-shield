@@ -61,8 +61,32 @@ public final class AgentFirewall {
     private static final class Pending { final String hash, agentId, host; final ActionType type; final Instant expires; final boolean brokered; Boolean approved; boolean used;
         Pending(String hash, String agentId, ActionType type, String host, Instant expires, boolean brokered) { this.hash = hash; this.agentId = agentId; this.type = type; this.host = host; this.expires = expires; this.brokered = brokered; } }
     private static final int MAX_PENDING_PER_AGENT = 5;
+
+    /**
+     * Cross-step ("chain") rules. Each request is also judged against what the same agent did earlier in its session, so
+     * a sequence is caught when every single step would pass on its own: reading private data and then sending, acting
+     * after an earlier step carried hijack wording, switching from "the content told me" to "the person told me", and a
+     * secret or card number split across several sends. Chain rules only add questions or refusals. Memory only: a
+     * session ends CHAIN_GAP_SECONDS after the agent's last request, and with unpairing or the kill switch.
+     */
+    public static final long CHAIN_GAP_SECONDS = 600, PROVENANCE_SWITCH_SECONDS = 120;
+    public static final int CHAIN_STEPS = 20, CHAIN_TAIL = 2000;
+    private static final int MAX_TRAILS = 64, MAX_TAIL_HOSTS = 8;
+    public enum StepOutcome { ALLOWED, ASKED, APPROVED, DENIED }
+    /** One earlier request of the session, for showing the person the chain. host is safe to show; no content is kept here. */
+    public record ChainStep(Instant time, ActionType type, String host, StepOutcome outcome, boolean fromContent) {}
+    private static final class Trail {
+        Instant last;
+        final List<ChainStep> steps = new ArrayList<>();
+        /** privateRead: the person approved a sensitive read this session; later sends ask, except to hosts approved since. */
+        boolean privateRead, injection;
+        final Set<String> approvedAfterRead = new HashSet<>();
+        Provenance lastProvenance; Instant lastAt;
+        /** The last CHAIN_TAIL characters actually sent to each host (allowed, or approved and used), to catch data split across sends. */
+        final LinkedHashMap<String, String> tails = new LinkedHashMap<>();
+    }
     /** Expensive scans are computed before taking the lock so one agent cannot stall the others. */
-    private record Scan(Set<SensitiveData.Kind> kinds, Set<String> injection, boolean timedOut) {}
+    private record Scan(Set<SensitiveData.Kind> kinds, Set<String> injection, boolean timedOut, Set<SensitiveData.Kind> split) {}
     private static final long SCAN_BUDGET_MILLIS = 2000;
 
     private final Clock clock;
@@ -78,6 +102,7 @@ public final class AgentFirewall {
     private final Map<String, Instant> rateNotes = new LinkedHashMap<>();
     /** Agents whose current session looks autonomous (AgentBehaviour): every action asks the person first. */
     private final Set<String> paused = new HashSet<>();
+    private final Map<String, Trail> trails = new LinkedHashMap<>();
     private long revision; // changes whenever anything that is saved changes; lets the app skip writes when nothing happened
     private long financialAutoLimit = 0; // any financial action needs approval by default
     private boolean lockdown;
@@ -128,14 +153,14 @@ public final class AgentFirewall {
     public synchronized List<String> killSwitch() {
         List<String> was = new ArrayList<>(new TreeSet<>(agents.keySet()));
         flushDenials(true);
-        agents.clear(); pending.clear(); recent.clear();
+        agents.clear(); pending.clear(); recent.clear(); trails.clear();
         lockdown = true;
         append(Event.KILL_SWITCH_ON, "", null, "", null, Collections.singletonList("AGENTS_REMOVED_" + was.size()));
         return was;
     }
     public synchronized void releaseKillSwitch() { if (!lockdown) return; lockdown = false; append(Event.KILL_SWITCH_OFF, "", null, "", null, Collections.emptyList()); }
     /** Restores the switch state at start-up without writing an audit entry (the entry was written when it was flipped). */
-    public synchronized void restoreLockdown(boolean on) { lockdown = on; if (on) { agents.clear(); pending.clear(); } }
+    public synchronized void restoreLockdown(boolean on) { lockdown = on; if (on) { agents.clear(); pending.clear(); trails.clear(); } }
     public synchronized boolean lockdown() { return lockdown; }
 
     /** The broker records whether it carried out an action (reason codes only, never the content). */
@@ -156,11 +181,11 @@ public final class AgentFirewall {
     }
 
     public synchronized void registerAgent(String agentId, Set<ActionType> permitted) { agents.put(agentId, EnumSet.copyOf(permitted.isEmpty() ? EnumSet.noneOf(ActionType.class) : permitted)); }
-    /** Also drops that agent's waiting and approved-but-unused approvals: a removed agent keeps nothing it was granted. */
     /** "Is this you?": while on, every request from this agent that would be allowed asks the person instead. */
     public synchronized void setPaused(String agentId, boolean on) { if (agentId == null) return; if (on) paused.add(agentId); else paused.remove(agentId); }
     public synchronized boolean paused(String agentId) { return paused.contains(agentId); }
-    public synchronized void unregisterAgent(String agentId) { agents.remove(agentId); if (pending.values().removeIf(p -> p.agentId.equals(agentId))) revision++; }
+    /** Also drops that agent's waiting and approved-but-unused approvals and its session: a removed agent keeps nothing it was granted. */
+    public synchronized void unregisterAgent(String agentId) { agents.remove(agentId); trails.remove(agentId); if (pending.values().removeIf(p -> p.agentId.equals(agentId))) revision++; }
     public synchronized void trustDestination(String domainOrHost) { trustedDestinations.add(domainOrHost.toLowerCase(Locale.ROOT)); }
     public synchronized void untrustDestination(String domainOrHost) { trustedDestinations.remove(domainOrHost.toLowerCase(Locale.ROOT)); }
     /** True for a plain host name the person may trust: 2+ labels of letters, digits and hyphens, not an IP address, at most 253 characters. */
@@ -176,6 +201,8 @@ public final class AgentFirewall {
 
     private Decision evaluate(Request r, boolean brokered) {
         Scan scan = null;
+        // Read before the lock like the other scans; a send that lands in between is checked against the older tail.
+        String tail = r == null || r.type() == null || !OUTBOUND.contains(r.type()) ? "" : tail(r.agentId(), hostOf(r.destination()));
         try {
             String sm = r == null || r.summary() == null ? "" : r.summary(), pl = r == null || r.payload() == null ? "" : r.payload();
             if (r != null && sm.length() <= MAX_SUMMARY && pl.length() <= MAX_PAYLOAD) {
@@ -189,13 +216,22 @@ public final class AgentFirewall {
                 kinds.addAll(SensitiveData.scan(sm, deadline));
                 String dest = r.destination() == null ? "" : (r.destination().length() > 4096 ? r.destination().substring(0, 4096) : r.destination());
                 kinds.addAll(SensitiveData.scan(dest, deadline)); // secrets can ride in a URL's query string
-                scan = new Scan(kinds, inj, false);
+                Set<SensitiveData.Kind> split = EnumSet.noneOf(SensitiveData.Kind.class);
+                if (!tail.isEmpty()) { // only what appears when the earlier sends and this one are joined
+                    split.addAll(SensitiveData.scan(tail + pl.substring(0, Math.min(pl.length(), CHAIN_TAIL)), deadline));
+                    split.removeAll(SensitiveData.scan(tail, deadline));
+                    split.removeAll(kinds);
+                }
+                scan = new Scan(kinds, inj, false, split);
             }
-        } catch (Deadline.ScanTimeout e) { scan = new Scan(EnumSet.noneOf(SensitiveData.Kind.class), new LinkedHashSet<>(), true);
+        } catch (Deadline.ScanTimeout e) { scan = new Scan(EnumSet.noneOf(SensitiveData.Kind.class), new LinkedHashSet<>(), true, EnumSet.noneOf(SensitiveData.Kind.class));
         } catch (RuntimeException e) { scan = null; }
         synchronized (this) {
-            try { return record(r, decide(r, scan, brokered)); }
-            catch (RuntimeException e) { return record(r, deny("ENGINE_ERROR")); }
+            Decision d;
+            try { d = decide(r, scan, brokered); }
+            catch (RuntimeException e) { d = deny("ENGINE_ERROR"); }
+            try { track(r, scan, d); } catch (RuntimeException ignored) { }
+            return record(r, d);
         }
     }
 
@@ -221,7 +257,7 @@ public final class AgentFirewall {
         boolean secrets = kinds.stream().anyMatch(SensitiveData.SECRETS::contains);
         boolean personal = kinds.stream().anyMatch(k -> !SensitiveData.SECRETS.contains(k));
         Set<String> injection = scan.injection();
-        Set<String> kindNames = new TreeSet<>(); for (SensitiveData.Kind k : kinds) kindNames.add(k.name());
+        Set<String> kindNames = new TreeSet<>(); for (SensitiveData.Kind k : kinds) kindNames.add(k.name()); for (SensitiveData.Kind k : scan.split()) kindNames.add(k.name());
         boolean outbound = OUTBOUND.contains(r.type());
         boolean highRisk = HIGH_RISK.contains(r.type());
 
@@ -242,6 +278,21 @@ public final class AgentFirewall {
         if (outbound && !trusted) ask.add(userDriven ? "UNTRUSTED_DESTINATION" : "UNTRUSTED_DESTINATION_WITHOUT_USER_INSTRUCTION");
         if (r.type() == ActionType.READ_SENSITIVE) ask.add(userDriven ? "SENSITIVE_READ" : "SENSITIVE_READ_WITHOUT_USER_INSTRUCTION");
 
+        // Chain rules: what this agent did earlier in the session.
+        Trail t = currentTrail(r.agentId(), now);
+        if (t != null) {
+            String host = safeHost(hostOf(r.destination()));
+            if (outbound && t.privateRead && !t.approvedAfterRead.contains(host)) ask.add("CHAIN_PRIVATE_READ_THEN_SEND");
+            if (t.injection && (outbound || highRisk || r.type() == ActionType.READ_SENSITIVE)) ask.add("CHAIN_AFTER_INJECTION_INDICATORS");
+            // Provenance is the agent's own claim; switching to "the person said so" right after acting on content is how a hijack would launder it.
+            if (userDriven && (outbound || highRisk) && t.lastProvenance != null && !isUser(t.lastProvenance) && !now.isAfter(t.lastAt.plusSeconds(PROVENANCE_SWITCH_SECONDS)))
+                ask.add("CHAIN_PROVENANCE_CHANGED");
+        }
+        if (!scan.split().isEmpty()) {
+            if (!trusted && scan.split().stream().anyMatch(SensitiveData.SECRETS::contains)) deny.add("CHAIN_SPLIT_SECRET_TO_UNTRUSTED_DESTINATION");
+            else ask.add("CHAIN_SPLIT_SENSITIVE_DATA");
+        }
+
         // Last, so it never hides a refusal; it only turns what would have run silently into a question.
         if (paused.contains(r.agentId())) ask.add("IS_THIS_YOU");
         if (!deny.isEmpty()) return new Decision(Verdict.DENY, dedupe(deny), null, kindNames);
@@ -256,6 +307,76 @@ public final class AgentFirewall {
             return new Decision(Verdict.ASK_USER, dedupe(ask), approvalId, kindNames);
         }
         return new Decision(Verdict.ALLOW, Collections.singletonList("NO_RISK_SIGNALS"), null, kindNames);
+    }
+
+    private static boolean isUser(Provenance p) { return p == Provenance.USER_DIRECT || p == Provenance.USER_CONFIRMED_PLAN; }
+
+    /** The agent's session, or null when it has none or it ended. */
+    private Trail currentTrail(String agentId, Instant now) {
+        Trail t = agentId == null ? null : trails.get(agentId);
+        if (t != null && now.isAfter(t.last.plusSeconds(CHAIN_GAP_SECONDS))) { trails.remove(agentId); t = null; }
+        return t;
+    }
+
+    private Trail trailFor(String agentId, Instant now) {
+        Trail t = currentTrail(agentId, now);
+        if (t == null) {
+            if (trails.size() >= MAX_TRAILS) trails.remove(trails.keySet().iterator().next());
+            t = new Trail(); trails.put(agentId, t);
+        }
+        t.last = now;
+        return t;
+    }
+
+    private synchronized String tail(String agentId, String host) {
+        Trail t = currentTrail(agentId, clock.instant());
+        String s = t == null ? null : t.tails.get(safeHost(host));
+        return s == null ? "" : s;
+    }
+
+    /** Records a decided request of a paired agent in its session. Refusals for flooding or the kill switch are not steps. */
+    private void track(Request r, Scan scan, Decision d) {
+        if (r == null || r.agentId() == null || r.type() == null || r.provenance() == null || !agents.containsKey(r.agentId())) return;
+        if (d.reasons().contains("RATE_LIMITED") || d.reasons().contains("KILL_SWITCH_ON")) return;
+        Instant now = clock.instant();
+        Trail t = trailFor(r.agentId(), now);
+        String host = safeHost(hostOf(r.destination()));
+        StepOutcome o = d.verdict() == Verdict.ALLOW ? StepOutcome.ALLOWED : d.verdict() == Verdict.ASK_USER ? StepOutcome.ASKED : StepOutcome.DENIED;
+        if (t.steps.size() >= CHAIN_STEPS) t.steps.remove(0);
+        t.steps.add(new ChainStep(now, r.type(), host, o, !isUser(r.provenance())));
+        if (scan != null && !scan.injection().isEmpty()) t.injection = true;
+        t.lastProvenance = r.provenance(); t.lastAt = now;
+        if (d.verdict() == Verdict.ALLOW && OUTBOUND.contains(r.type())) addTail(t, host, r.payload());
+    }
+
+    /** An approval was used, so the action happened: the step shows as approved, and a read or send counts for the chain. */
+    private void trackApproved(Request r) {
+        if (r == null || r.agentId() == null || r.type() == null) return;
+        Trail t = trailFor(r.agentId(), clock.instant());
+        String host = safeHost(hostOf(r.destination()));
+        for (int i = t.steps.size() - 1; i >= 0; i--) {
+            ChainStep s = t.steps.get(i);
+            if (s.outcome() == StepOutcome.ASKED && s.type() == r.type() && s.host().equals(host)) {
+                t.steps.set(i, new ChainStep(s.time(), s.type(), s.host(), StepOutcome.APPROVED, s.fromContent()));
+                break;
+            }
+        }
+        if (r.type() == ActionType.READ_SENSITIVE) { t.privateRead = true; t.approvedAfterRead.clear(); }
+        if (OUTBOUND.contains(r.type())) { addTail(t, host, r.payload()); if (t.privateRead) t.approvedAfterRead.add(host); }
+    }
+
+    private static void addTail(Trail t, String host, String payload) {
+        if (payload == null || payload.isEmpty()) return;
+        String joined = t.tails.getOrDefault(host, "") + payload;
+        t.tails.remove(host); // re-inserted as the most recent
+        if (t.tails.size() >= MAX_TAIL_HOSTS) t.tails.remove(t.tails.keySet().iterator().next());
+        t.tails.put(host, joined.length() > CHAIN_TAIL ? joined.substring(joined.length() - CHAIN_TAIL) : joined);
+    }
+
+    /** The agent's current session, oldest step first (empty when it has none). For showing the person how a request was reached. */
+    public synchronized List<ChainStep> chain(String agentId) {
+        Trail t = currentTrail(agentId, clock.instant());
+        return t == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(t.steps));
     }
 
     /** Called by the user interface only. */
@@ -287,6 +408,7 @@ public final class AgentFirewall {
         if (refused != null) { append(Event.REDEEM_REFUSED, agent, type, host, null, Collections.singletonList(refused)); return false; }
         p.used = true;
         pending.remove(approvalId);
+        trackApproved(r);
         append(Event.REDEEMED, agent, type, host, null, Collections.emptyList());
         return true;
     }

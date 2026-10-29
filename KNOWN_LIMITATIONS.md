@@ -1,4 +1,4 @@
-# Known limitations — 0.8.5-rc16 (internal test build)
+# Known limitations — 0.8.6-rc17 (internal test build)
 
 - **Never run on a real phone.** Since 0.8.2-rc13 the debug build runs instrumented tests on an Android 15 (API 35) x86_64 emulator in CI; see TEST_RESULTS.md for exactly what they cover. Still unverified: real phones and OEM skins (Samsung One UI etc.), other Android versions, battery and Doze, the release/R8 build at runtime, and every flow that needs a person in a system dialog (VPN consent, Contacts, share sheet, file picker). Older sections below that say "never run on a device" predate the emulator tests; where an emulator test now covers the behaviour, TEST_RESULTS.md says so.
 - No production threat feed or signing key, no signed updater or reputation backend, no redirect fetching, global AI control, app inventory or permanent detection history. An experimental text classifier (off by default), a consented DNS-only VPN filter and a voluntary agent firewall exist but are unverified on devices.
@@ -11,6 +11,12 @@
 - A hostile document provider can block inside read() and delay cancellation despite byte and coroutine checks. Process death can leave private temporary files until next cold start. Cache deletion can fail; device testing required.
 - UI localizes labels/explanations, but technical details/underlying parser evidence can remain English. No automated visual/TalkBack review yet.
 - SDK35 baseline is not a current Play compliance assertion. No release key, signed production APK, legal review, fully resolved SBOM or independent security certification.
+
+## Cross-step chain rules (0.8.6-rc17)
+- Fixed rules with fixed windows (10-minute session gap, 2-minute provenance switch, 2,000-character tail per host). No false-positive rate has been measured; an agent that legitimately reads and then sends will ask more often.
+- Only what an agent tells the gateway is seen. Steps done outside Aegis (its own network calls, other apps, Accessibility) are invisible, so a read through another route followed by a send is not a chain. Provenance is the agent's own claim.
+- Split data is only caught for pieces sent to the same host, in order, within the last 2,000 characters, and only for the kinds the sensitive-data scanner already knows. Pieces spread over several hosts, encoded, reordered or padded past the tail are missed.
+- Sessions are memory only; they are lost when Android stops the app, so a chain that spans a restart is not seen.
 
 ## Agent behaviour watch (0.8.5-rc16)
 - The ratings come from fixed, untuned rules (2 calls or 3 AI lookups while locked; 8+ calls averaging under 4 s; 10+ calls with a coefficient of variation under 0.25). No false-positive or detection rate has been measured; scheduled agents the person set up themselves are rated "on its own" by design and need one "yes, that was me" per session.

@@ -148,6 +148,10 @@ fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>
                     }
                     Text(tx.t("The agent says: ", "Agenten sier: ") + "\"${item.summary}\"", style = MaterialTheme.typography.bodySmall)
                     item.reasons.forEach { Text("• " + agentReason(it, tx.no), style = MaterialTheme.typography.bodySmall) }
+                    if (item.chain.isNotEmpty()) {
+                        Text(tx.t("What this agent did just before, in order:", "Hva agenten gjorde rett før, i rekkefølge:"), style = MaterialTheme.typography.labelMedium)
+                        item.chain.forEach { Text(chainStepText(it, tx), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
+                    }
                     Text(tx.t("This request expires after 5 minutes.", "Forespørselen utløper etter 5 minutter."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 TextButton(onClick = onDismiss) { Text(tx.t("Decide later", "Avgjør senere")) }
@@ -331,4 +335,18 @@ fun AgentLogCard(audit: AuditView, tx: Tx, dark: Boolean, context: Context) {
             if (exportFailed) Text(tx.t("Export failed.", "Eksporten feilet."), color = strong.accent, style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+/** One earlier step of the session, from ApprovalItem.chain (TYPE|host|OUTCOME|fromContent). */
+internal fun chainStepText(encoded: String, tx: Tx): String {
+    val f = encoded.split('|')
+    if (f.size != 4) return "• ?"
+    val outcome = when (f[2]) {
+        "ALLOWED" -> tx.t("allowed", "tillatt")
+        "APPROVED" -> tx.t("you approved", "du godkjente")
+        "ASKED" -> tx.t("asked, not carried out", "spurt, ikke utført")
+        else -> tx.t("refused", "nektet")
+    }
+    return "• " + f[0].lowercase().replace('_', ' ') + (if (f[1].isNotEmpty()) " → " + f[1] else "") + " · " + outcome +
+        if (f[3] == "1") tx.t(" · from outside content", " · fra innhold utenfra") else ""
 }

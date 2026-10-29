@@ -88,6 +88,11 @@ internal fun agentReason(code: String, no: Boolean): String {
         "KILL_SWITCH_ON" -> t("Emergency stop was on.", "Nødstopp var på.")
         "IS_THIS_YOU" -> t("Is this you? This agent seems to be acting on its own (for example while the phone is locked or faster than a person), so Aegis asks before each action.", "Er dette deg? Agenten ser ut til å handle på egen hånd (for eksempel mens telefonen er låst eller raskere enn en person), så Aegis spør før hver handling.")
         "UNKNOWN_AGENT" -> t("The app was not connected.", "Appen var ikke koblet til.")
+        "CHAIN_PRIVATE_READ_THEN_SEND" -> t("This agent read sensitive data earlier in this session and now wants to send something. Each step looked fine alone; together they can be a leak.", "Agenten leste sensitive data tidligere i denne økten og vil nå sende noe. Hvert steg så greit ut alene; sammen kan de være en lekkasje.")
+        "CHAIN_AFTER_INJECTION_INDICATORS" -> t("An earlier step in this session contained wording typical of attempts to hijack an AI assistant, so later risky steps ask you.", "Et tidligere steg i denne økten hadde ordlyd som er typisk for forsøk på å kapre en KI-assistent, så senere risikable steg spør deg.")
+        "CHAIN_PROVENANCE_CHANGED" -> t("Moments ago this agent was acting on outside content; now it says you asked for this. Check that you did.", "For et øyeblikk siden handlet agenten på innhold utenfra; nå sier den at du ba om dette. Sjekk at du gjorde det.")
+        "CHAIN_SPLIT_SENSITIVE_DATA" -> t("Together with what was just sent to the same place, this forms sensitive data (such as a card number) that no single send showed.", "Sammen med det som nettopp ble sendt til samme sted, danner dette sensitive data (for eksempel et kortnummer) som ingen enkelt sending viste.")
+        "CHAIN_SPLIT_SECRET_TO_UNTRUSTED_DESTINATION" -> t("A secret key or password was being sent in pieces to a destination you have not trusted.", "En hemmelig nøkkel eller et passord ble sendt i biter til et mål du ikke har stolt på.")
         else -> code
     }
 }

@@ -148,7 +148,10 @@ class AgentGatewayService : Service() {
             decision.dataKinds().toList(), request.payload().length,
             // Control and bidi characters made visible; commands and shared text get more room because that is what is being approved.
             AgentFirewall.previewSafe(request.payload(), if (request.type() == ActionType.EXECUTE_COMMAND || broker.isNotEmpty()) 800 else 300),
-            AgentFirewall.previewSafe(request.destination(), 160), broker)
+            AgentFirewall.previewSafe(request.destination(), 160), broker,
+            // The request itself is the session's last step; show the ones that led to it.
+            if (decision.reasons().none { it.startsWith("CHAIN_") }) emptyList()
+            else AgentGateway.firewall.chain(pkg).dropLast(1).takeLast(6).map { "${it.type().name}|${it.host()}|${it.outcome().name}|${if (it.fromContent()) 1 else 0}" })
 
     /**
      * Capability broker: the agent asks Aegis to carry the action out. Links also go through Aegis' own link check

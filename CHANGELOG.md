@@ -190,3 +190,15 @@ Version 0.8.5-rc16 (versionCode 22).
 - New: "Is this you?". While a paired agent's session is rated on its own, every one of its actions asks the person first (`AgentFirewall.setPaused`, reason IS_THIS_YOU), even ones policy would allow; a refusal stays a refusal. The person answers "Yes, that was me" (the session continues normally) or "No, remove it" (unpairs). AI-service use while the phone was locked gets the same question, with the apps that hold screen control or notification access listed as candidates, since Android does not say which app looked the service up.
 - One generic notification per unanswered session (no app or service name on the lock screen); a Home item; an "AI agent activity" card on the Protection screen. Kept in memory for 24 hours, never saved or sent.
 - Tests: `AgentBehaviourTests` (48 checks); `AgentWatchDeviceTest` and a new `AgentGatewayDeviceTest` case (8 quick calls over the real Messenger interface end in ASK_USER / IS_THIS_YOU, and run again once confirmed).
+
+## 0.8.6-rc17 cross-step chain rules in the agent gateway (2026-10-29)
+Version 0.8.6-rc17 (versionCode 23).
+- New: the agent firewall judges each request against what the same agent did earlier in its session (10-minute gap, memory only), so a sequence is caught when every step passes alone. Motivated by workflow-level anomaly detection research (Zhang et al., "Skynet", arXiv:2609.06835) and the payload-splitting gap in the agentic-AI security survey; this is a small rule-based version, not the paper's learned model.
+  - CHAIN_PRIVATE_READ_THEN_SEND (ask): any send, share or agent message after a sensitive read the person approved and the agent used, even to a trusted host. Once the person approves a send to a host after the read, later sends to that host are not asked again until the next read.
+  - CHAIN_AFTER_INJECTION_INDICATORS (ask): after any step of the session carried hijack wording, later sends, sensitive reads and risky actions ask.
+  - CHAIN_PROVENANCE_CHANGED (ask): a send or risky action claiming the person's instruction within 2 minutes of a step the agent said came from outside content or another agent.
+  - CHAIN_SPLIT_SENSITIVE_DATA (ask) / CHAIN_SPLIT_SECRET_TO_UNTRUSTED_DESTINATION (deny): a card number, IBAN, ID number, key or password that only appears when the last 2,000 characters actually sent to the same host are joined with the new payload.
+- Chain rules only add questions or refusals; no existing refusal or question changes. Refused, unused and rate-limited requests do not count as things the agent did. Unpairing and the kill switch forget the session.
+- The approval dialog lists the steps that led to a chain question (type, host, outcome, whether it came from outside content; never content).
+- Tests: new `ChainTests` (53 checks); one `AgentBehaviourTests` case changed provenance of a refused request so it does not trigger the new provenance rule; new `AgentGatewayDeviceTest` case over the real Messenger interface.
+

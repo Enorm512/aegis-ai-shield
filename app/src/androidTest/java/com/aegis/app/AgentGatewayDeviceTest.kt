@@ -195,6 +195,27 @@ class AgentGatewayDeviceTest {
         }
     }
 
+    /** Chain rule through the real gateway: after an approved sensitive read, a send to a trusted host asks and shows the read. */
+    @Test fun sendAfterApprovedReadAsksAndShowsTheChain() {
+        pairSelf()
+        assertTrue(AgentGateway.addTrusted(context, trustedHost))
+        val send = { request("SEND_DATA", "https://$trustedHost/v1", "note") }
+        Client(context).use { c ->
+            assertEquals("a send before any read is allowed", AegisProtocol.VERDICT_ALLOW, c.call(AegisProtocol.MSG_EVALUATE, send()).verdict())
+            val read = { request("READ_SENSITIVE", "", "") }
+            val asked = c.call(AegisProtocol.MSG_EVALUATE, read())
+            assertEquals(AegisProtocol.VERDICT_ASK_USER, asked.verdict())
+            val id = asked.getString(AegisProtocol.KEY_APPROVAL_ID)!!
+            AgentGateway.resolve(context, id, true)
+            assertTrue(c.call(AegisProtocol.MSG_REDEEM, read().apply { putString(AegisProtocol.KEY_APPROVAL_ID, id) }).getBoolean(AegisProtocol.KEY_GRANTED))
+            val after = c.call(AegisProtocol.MSG_EVALUATE, send())
+            assertEquals(after.reasons().toString(), AegisProtocol.VERDICT_ASK_USER, after.verdict())
+            assertTrue("CHAIN_PRIVATE_READ_THEN_SEND" in after.reasons())
+            val item = AgentGateway.approvals.value.single { it.id == after.getString(AegisProtocol.KEY_APPROVAL_ID) }
+            assertEquals(listOf("SEND_DATA|$trustedHost|ALLOWED|0", "READ_SENSITIVE||APPROVED|0"), item.chain)
+        }
+    }
+
     @Test fun askedCallNeedsTheApprovalAndRedeemsOnce() {
         pairSelf()
         val dest = "https://notes.example.net/upload"

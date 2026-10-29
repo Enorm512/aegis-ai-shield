@@ -110,7 +110,7 @@ public final class AgentBehaviourTests {
         Decision asked = f.evaluate(benign);
         check(asked.verdict() == Verdict.ASK_USER && asked.reasons().contains("IS_THIS_YOU") && asked.approvalId() != null, "paused asks: " + asked);
         check(f.resolve(asked.approvalId(), true) && f.redeem(asked.approvalId(), benign), "the person can still approve it");
-        Request secret = new Request("com.agent", ActionType.SEND_DATA, "https://unknown.example.net/x", "Upload", "my password is hunter2 and AKIAABCDEFGHIJKLMNOP", Provenance.EXTERNAL_CONTENT, -1, null);
+        Request secret = new Request("com.agent", ActionType.SEND_DATA, "https://unknown.example.net/x", "Upload", "my password is hunter2 and AKIAABCDEFGHIJKLMNOP", Provenance.USER_DIRECT, -1, null);
         check(f.evaluate(secret).verdict() == Verdict.DENY, "a refusal stays a refusal");
         f.setPaused("com.agent", false);
         check(f.evaluate(benign).verdict() == Verdict.ALLOW, "unpaused allows again");

@@ -28,7 +28,9 @@ data class ApprovalItem(val id: String, val agent: String, val type: String, val
                         val amountMinor: Long = -1, val currency: String = "", val dataKinds: List<String> = emptyList(), val payloadChars: Int = 0,
                         val payloadPreview: String = "", val destinationRaw: String = "",
                         /** OPEN_URL or SHARE_TEXT when Aegis itself will carry the action out once approved; empty otherwise. */
-                        val broker: String = "")
+                        val broker: String = "",
+                        /** Earlier steps of this agent's session when a chain rule fired, as TYPE|host|OUTCOME|fromContent (1/0). */
+                        val chain: List<String> = emptyList())
 
 /** What the activity log screen shows. intactAtLoad = false when the saved log was damaged, edited or unreadable at start-up. */
 data class AuditView(val entries: List<AgentFirewall.AuditEntry> = emptyList(), val head: String = "", val intactAtLoad: Boolean = true, val saveFailed: Boolean = false,
@@ -127,7 +129,8 @@ object AgentGateway {
                 ApprovalItem(o.getString("id"), o.getString("agent"), o.getString("type"), o.getString("host"), o.getString("summary"),
                     o.getJSONArray("reasons").let { r -> (0 until r.length()).map { r.getString(it) } }, o.getLong("created"),
                     o.getLong("amount"), o.getString("currency"), o.getJSONArray("kinds").let { r -> (0 until r.length()).map { r.getString(it) } },
-                    o.getInt("chars"), o.getString("preview"), o.getString("raw"), o.optString("broker", ""))
+                    o.getInt("chars"), o.getString("preview"), o.getString("raw"), o.optString("broker", ""),
+                    o.optJSONArray("chain")?.let { r -> (0 until r.length()).map { r.getString(it) } } ?: emptyList())
             }
         }.getOrDefault(emptyList())
         mutableApprovals.value = items.filter { it.id in open }.takeLast(20)
@@ -145,7 +148,7 @@ object AgentGateway {
         mutableApprovals.value.forEach { i ->
             items.put(JSONObject().put("id", i.id).put("agent", i.agent).put("type", i.type).put("host", i.destinationHost).put("summary", i.summary)
                 .put("reasons", JSONArray(i.reasons)).put("created", i.createdMillis).put("amount", i.amountMinor).put("currency", i.currency)
-                .put("kinds", JSONArray(i.dataKinds)).put("chars", i.payloadChars).put("preview", i.payloadPreview).put("raw", i.destinationRaw).put("broker", i.broker))
+                .put("kinds", JSONArray(i.dataKinds)).put("chars", i.payloadChars).put("preview", i.payloadPreview).put("raw", i.destinationRaw).put("broker", i.broker).put("chain", JSONArray(i.chain)))
         }
         val auditText = firewall.exportAudit() // may first add a denial summary, which advances the revision
         val ok = SealedStore.write(app, AUDIT_FILE, auditText) and

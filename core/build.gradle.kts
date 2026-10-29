@@ -126,6 +126,13 @@ val brokerRegression by tasks.registering(JavaExec::class) {
     jvmArgs("-Dfile.encoding=UTF-8")
     workingDir = projectDir
 }
+val chainRegression by tasks.registering(JavaExec::class) {
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("com.aegis.core.ChainTests")
+    jvmArgs("-Dfile.encoding=UTF-8")
+    workingDir = projectDir
+}
 val imageCheckRegression by tasks.registering(JavaExec::class) {
     dependsOn(tasks.testClasses)
     classpath = sourceSets.test.get().runtimeClasspath
@@ -140,4 +147,4 @@ val agentBehaviourRegression by tasks.registering(JavaExec::class) {
     jvmArgs("-Dfile.encoding=UTF-8")
     workingDir = projectDir
 }
-tasks.check { dependsOn(agentBehaviourRegression, imageCheckRegression, correlatorRegression, appWatchRegression, brokerRegression, agentShieldRegression, canaryRegression, capabilityRegression, dataToolsRegression, spotRegression, verdictRegression, firewallReviewRegression, resultRegression, coreRegression, archiveRegression, threatIntelRegression, aiRegression, dnsRegression, manifestRegression, lookalikeRegression, agentRegression) }
+tasks.check { dependsOn(chainRegression, agentBehaviourRegression, imageCheckRegression, correlatorRegression, appWatchRegression, brokerRegression, agentShieldRegression, canaryRegression, capabilityRegression, dataToolsRegression, spotRegression, verdictRegression, firewallReviewRegression, resultRegression, coreRegression, archiveRegression, threatIntelRegression, aiRegression, dnsRegression, manifestRegression, lookalikeRegression, agentRegression) }
