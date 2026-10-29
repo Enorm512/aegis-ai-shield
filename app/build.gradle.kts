@@ -12,8 +12,8 @@ android {
         applicationId = "com.aegis.aishield"
         minSdk = 26
         targetSdk = 36
-        versionCode = 20
-        versionName = "0.8.3-rc14"
+        versionCode = 21
+        versionName = "0.8.4-rc15"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     // Release signing comes only from an untracked keystore.properties (storeFile, storePassword, keyAlias, keyPassword).
@@ -63,6 +63,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+    // Screenshot and QR check, both offline: Tesseract OCR (native, Apache-2.0) and ZXing's QR decoder (pure Java, Apache-2.0).
+    implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
+    implementation("com.google.zxing:core:3.5.3")
     debugImplementation("androidx.compose.ui:ui-tooling")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.04.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

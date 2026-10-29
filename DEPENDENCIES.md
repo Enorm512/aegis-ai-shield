@@ -21,3 +21,11 @@ No new libraries. New Android permissions are listed in NETWORK_PROTECTION.md. B
 
 ## Stage 6
 Checksums of all 436 resolved artifacts are pinned in gradle/verification-metadata.xml. Outdated-dependency lint warnings (Compose BOM 2025.04.01 -> 2026.09.00, activity-compose, lifecycle 2.8.7 -> 2.11.0, coroutines, test libs) are deliberately not applied without a re-test on devices.
+
+## 0.8.4-rc15 screenshot and QR check
+| Dependency | Version | Purpose | Licence / gate |
+|---|---|---|---|
+| Tesseract4Android (`cz.adaptech.tesseract4android:tesseract4android`) | 4.9.0 (Tesseract 5.5.1, Leptonica 1.85.0, libjpeg 9f, libpng 1.6.48) | On-device text recognition | Apache-2.0 wrapper; bundled libraries under their own licences (Tesseract Apache-2.0, Leptonica BSD-2, libjpeg IJG, libpng libpng licence). From JitPack only, enforced by `exclusiveContent` in settings.gradle.kts. |
+| ZXing core (`com.google.zxing:core`) | 3.5.3 | QR decoding | Apache-2.0, pure Java, no network code |
+| tessdata_fast `eng`, `nor` | tag 4.1.0 | Trained models in `app/src/main/assets/tessdata/` | Apache-2.0 (github.com/tesseract-ocr/tessdata_fast) |
+Google ML Kit was considered and not used: its terms let it send usage and performance metrics, which the privacy policy rules out. `tools/check_privacy.py` fails the build check if ML Kit, Firebase, Play services or data-transport libraries are resolved.

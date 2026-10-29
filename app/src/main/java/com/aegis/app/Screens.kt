@@ -13,6 +13,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -93,6 +94,9 @@ fun AegisApp(s: UiState, vm: AegisViewModel, context: Context) {
     val apkPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::inspect) }
     val bundlePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::importBundle) }
     val pickApk = { apkPicker.launch(arrayOf("application/vnd.android.package-archive", "application/octet-stream", "application/zip")) }
+    // The system photo picker: no storage permission, and Aegis sees only the one picture chosen.
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::inspectImage) }
+    val pickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 
     var showDisclosure by remember { mutableStateOf(false) }
     var reviewOpen by remember { mutableStateOf(false) }
@@ -151,7 +155,7 @@ fun AegisApp(s: UiState, vm: AegisViewModel, context: Context) {
                     }) { screen ->
                         when (screen) {
                             Screens.HOME -> HomeScreen(s, vm, tx, stats, running, pairings.size + approvals.size, pairedAgents.size, powers, tripwires, pickApk) { reviewOpen = true }
-                            Screens.CHECK -> CheckScreen(s, vm, tx, context, pickApk)
+                            Screens.CHECK -> CheckScreen(s, vm, tx, context, pickApk, pickImage)
                             Screens.PROTECT -> ProtectScreen(s, tx, stats, running, pairedAgents.keys.sorted(), trustedHosts, powers, tripwires, waiting, onStart = { showDisclosure = true }, onReview = { reviewOpen = true }, onUnpair = { unpairTarget = it }, context = context)
                             else -> MoreScreen(s, vm, tx, context) { bundlePicker.launch(arrayOf("*/*")) }
                         }
@@ -249,7 +253,7 @@ private fun HomeScreen(s: UiState, vm: AegisViewModel, tx: Tx, stats: State<Prot
 // ---------------------------------------------------------------------------------------------------------------
 
 @Composable
-private fun CheckScreen(s: UiState, vm: AegisViewModel, tx: Tx, context: Context, pickApk: () -> Unit) {
+private fun CheckScreen(s: UiState, vm: AegisViewModel, tx: Tx, context: Context, pickApk: () -> Unit, pickImage: () -> Unit) {
     val effective = s.kindOverride ?: InputKind.detect(s.input)
     val bring = remember { BringIntoViewRequester() }
     LaunchedEffect(s.result) { if (s.result != null) { delay(80); bring.bringIntoView() } }
@@ -274,6 +278,15 @@ private fun CheckScreen(s: UiState, vm: AegisViewModel, tx: Tx, context: Context
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = vm::analyze, enabled = s.input.isNotBlank() && !s.busy && !s.inputTooLong, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) { IconLabel(R.drawable.ic_check, tx.t("Check", "Sjekk")) }
             OutlinedButton(onClick = vm::clear, enabled = !s.busy && (s.input.isNotEmpty() || s.result != null), modifier = Modifier.heightIn(min = 52.dp)) { Text(tx.t("Clear", "Tøm")) }
+        }
+        Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionTitle(tx.t("Check a screenshot or QR code", "Sjekk et skjermbilde eller en QR-kode"), icon = R.drawable.ic_image)
+                Text(tx.t("Reads the text and any QR codes in a picture on this phone, then checks them like a message and a link. QR codes that sign a new device in to your chats, ask for crypto or hold login keys are pointed out. Nothing is uploaded or saved. You can also share a picture to Aegis.",
+                    "Leser teksten og eventuelle QR-koder i et bilde på denne telefonen, og sjekker dem som en melding og en lenke. QR-koder som logger inn en ny enhet på chattene dine, ber om krypto eller inneholder innloggingsnøkler blir pekt ut. Ingenting lastes opp eller lagres. Du kan også dele et bilde til Aegis."),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedButton(onClick = pickImage, enabled = !s.busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { IconLabel(R.drawable.ic_image, tx.t("Choose a picture", "Velg et bilde")) }
+            }
         }
         Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -456,7 +469,7 @@ private fun MoreScreen(s: UiState, vm: AegisViewModel, tx: Tx, context: Context,
                 SectionTitle(tx.t("About Aegis", "Om Aegis"), icon = R.drawable.ic_info)
                 Text(tx.t("No account, no ads, no analytics, no saved scan history. Network access is used only by the optional DNS protection.", "Ingen konto, ingen reklame, ingen analyse, ingen lagret skannehistorikk. Nettverkstilgang brukes bare av den valgfrie DNS-beskyttelsen."), style = MaterialTheme.typography.bodyMedium)
                 Text(tx.t("Aegis finds evidence; it cannot guarantee safety. Local checks can miss threats and flag harmless things. Never share passwords or one-time codes.", "Aegis finner indikasjoner; den kan ikke garantere trygghet. Lokale sjekker kan overse trusler og flagge harmløse ting. Del aldri passord eller engangskoder."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(tx.t("Version 0.8.3-rc14 · preview build: DNS protection, the AI agent guard and the release build have not been tested on real devices yet.", "Versjon 0.8.3-rc14 · forhåndsversjon: DNS-beskyttelse, KI-agentvakten og utgivelsesbygget er ikke testet på ekte enheter ennå."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tx.t("Version 0.8.4-rc15 · preview build: DNS protection, the AI agent guard and the release build have not been tested on real devices yet.", "Versjon 0.8.4-rc15 · forhåndsversjon: DNS-beskyttelse, KI-agentvakten og utgivelsesbygget er ikke testet på ekte enheter ennå."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

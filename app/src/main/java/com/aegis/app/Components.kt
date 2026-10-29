@@ -127,7 +127,7 @@ fun ResultCard(r: ResultUi, dark: Boolean, tx: Tx, modifier: Modifier = Modifier
     val reduce = LocalReduceMotion.current
     val enter = remember(r) { Animatable(if (reduce) 1f else 0f) }
     LaunchedEffect(r) { if (!reduce) enter.animateTo(1f, tween(320)) }
-    val details = r.summary.details.map { findingText(it, tx.no) } + (r.apk?.let { apkFactLines(it, tx.no) } ?: emptyList()) + r.summary.limitations.map { findingText(it, tx.no) }
+    val details = r.summary.details.map { findingText(it, tx.no) } + (r.apk?.let { apkFactLines(it, tx.no) } ?: emptyList()) + (r.image?.let { imageFactLines(it, tx.no) } ?: emptyList()) + r.summary.limitations.map { findingText(it, tx.no) }
     Card(modifier.graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 28.dp.toPx() }.animateContentSize().semantics { liveRegion = LiveRegionMode.Polite },
         shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = style.container.compositeOver(MaterialTheme.colorScheme.surfaceContainerLow))) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {

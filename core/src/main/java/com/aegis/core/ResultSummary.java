@@ -7,7 +7,7 @@ import java.util.*;
  * next, and the rest as optional detail. Pure logic so it is host-tested; wording and translation live in the app.
  */
 public final class ResultSummary {
-    public enum Subject { LINK, MESSAGE, APK }
+    public enum Subject { LINK, MESSAGE, APK, IMAGE }
     /** Same order as Analysis.Verdict from weakest to strongest evidence of a problem, with UNCLEAR for "could not assess". */
     public enum Level { CLEAR, UNCLEAR, SUSPICIOUS, STRONG, CONFIRMED }
 
@@ -29,10 +29,10 @@ public final class ResultSummary {
     }
 
     private static final Map<String, Integer> WEIGHT = new HashMap<>();
-    private static final Set<String> LIMITATIONS = new HashSet<>(Arrays.asList("HEURISTIC_LIMITS", "APK_MANIFEST_LIMITS"));
+    private static final Set<String> LIMITATIONS = new HashSet<>(Arrays.asList("HEURISTIC_LIMITS", "APK_MANIFEST_LIMITS", "IMAGE_LIMITS"));
     static {
-        String[] ranked = {"KNOWN_MALICIOUS_HASH", "THREATDB_LISTED", "SECRET_REQUEST", "APK_BANKER_PATTERN", "LOOKALIKE_BRAND", "APK_SMS_EXFIL_PATTERN", "APK_DROPPER_PATTERN",
-            "BRAND_OUTSIDE_KNOWN_DOMAIN", "GIFTCARD_REQUEST", "FAMILY_IMPERSONATION", "PARCEL_FEE", "INVESTMENT_LURE", "MIXED_SCRIPT_HOST", "VERIFY_REQUEST", "USERINFO", "UNUSUAL_PAYMENT", "PRIZE_PAYMENT", "SUSPICIOUS_LINK", "THREAT_LANGUAGE",
+        String[] ranked = {"KNOWN_MALICIOUS_HASH", "THREATDB_LISTED", "QR_DEVICE_LINK", "SECRET_REQUEST", "QR_SIGNIN_SECRET", "APK_BANKER_PATTERN", "LOOKALIKE_BRAND", "APK_SMS_EXFIL_PATTERN", "APK_DROPPER_PATTERN",
+            "BRAND_OUTSIDE_KNOWN_DOMAIN", "GIFTCARD_REQUEST", "FAMILY_IMPERSONATION", "PARCEL_FEE", "INVESTMENT_LURE", "QR_CRYPTO_PAYMENT", "QR_APP_DOWNLOAD", "MIXED_SCRIPT_HOST", "VERIFY_REQUEST", "USERINFO", "UNUSUAL_PAYMENT", "PRIZE_PAYMENT", "SUSPICIOUS_LINK", "THREAT_LANGUAGE",
             "APK_CAPABILITIES", "ML_SCAM_LANGUAGE", "URGENCY", "APK_NO_LAUNCHER", "REDIRECT_PARAMETER", "SUSPICIOUS_TLD", "ML_AGREES"};
         for (int i = 0; i < ranked.length; i++) WEIGHT.put(ranked[i], 1000 - i * 10);
     }
@@ -88,6 +88,20 @@ public final class ResultSummary {
             if (flagged) { out.add("DO_NOT_INSTALL"); out.add("INSTALL_FROM_STORE"); out.add("ALREADY_INSTALLED"); out.add("REPORT_IT"); }
             else if (level == Level.UNCLEAR) { out.add("CHECK_INPUT"); out.add("INSTALL_FROM_STORE"); }
             else { out.add("INSTALL_FROM_STORE"); out.add("STAY_CAUTIOUS"); }
+            return out;
+        }
+        if (subject == Subject.IMAGE) {
+            if (flagged) {
+                if (codes.contains("QR_DEVICE_LINK") || codes.contains("QR_APP_DOWNLOAD")) out.add("DO_NOT_SCAN");
+                if (codes.contains("QR_SIGNIN_SECRET")) out.add("KEEP_QR_PRIVATE");
+                if (codes.contains("QR_LINK") && !codes.contains("QR_DEVICE_LINK")) out.add("DO_NOT_OPEN");
+                out.add("GO_OFFICIAL_ROUTE");
+                out.add("NEVER_SHARE_CODES");
+                if (codes.contains("UNUSUAL_PAYMENT") || codes.contains("QR_CRYPTO_PAYMENT")) out.add("PAYMENT_HARD_TO_RECOVER");
+                if (strong) out.add("ALREADY_ACTED");
+                out.add("REPORT_IT");
+            } else if (level == Level.UNCLEAR) { out.add("CHECK_IMAGE"); out.add("VERIFY_OTHER_WAY"); }
+            else { out.add("VERIFY_OTHER_WAY"); out.add("STAY_CAUTIOUS"); }
             return out;
         }
         if (flagged) {

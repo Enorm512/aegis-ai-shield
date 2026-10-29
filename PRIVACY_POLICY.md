@@ -11,6 +11,7 @@ Aegis analyses links, messages and APK files **on your device**. The developer r
 | Feature | Data | Where it goes |
 |---|---|---|
 | Link and message checks | Text or URLs you paste or share to the app | Analysed in memory on the device; not stored; not sent anywhere. Links are never opened. |
+| Screenshot and QR check | A picture you choose in Android's photo picker or share to Aegis | Read in memory on the device: text by Tesseract OCR and QR codes by ZXing, both bundled in the app and working offline. The picture is not saved, uploaded or kept after the check; the text read is shown to you and checked like a message, and web links in QR codes are checked like links but never opened. Nothing in a QR code is joined, paid or scanned. |
 | APK review | The file you choose | Copied to the app's temporary cache, read, deleted afterwards; not uploaded. |
 | Threat database | A signed file you import | Stored on the device; lookups are local. |
 | Experimental language model | Message text | Scored by a small model bundled in the app, on the device. |
@@ -21,7 +22,7 @@ Aegis analyses links, messages and APK files **on your device**. The developer r
 | Your lists and pairings | Domains you allow or block; package names and signing-certificate fingerprints of paired apps | Stored in the app's private storage; excluded from Android backups and device transfer. |
 
 ## Permissions
-Internet and network state (only to forward allowed DNS lookups and discover your network's DNS server), foreground service (to show that DNS protection is running), notifications (the running notice). No access to contacts, SMS, location, microphone, camera, call logs, accounts, or the installed-app list. Files are chosen through Android's file picker.
+Internet and network state (only to forward allowed DNS lookups and discover your network's DNS server), foreground service (to show that DNS protection is running), notifications (the running notice). No access to contacts, SMS, location, microphone, camera, call logs, accounts, or the installed-app list. Files are chosen through Android's file picker, and pictures through Android's photo picker, which shows Aegis only the one picture you pick (no storage or photo permission).
 
 ## Sharing
 None by the developer. If you use DNS protection, your device's DNS lookups go to the DNS server provided by your network or operator, as they do without the app; that party's own privacy policy applies. [Decide with counsel how to declare this in Play's Data safety form.]

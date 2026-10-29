@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.aegis.core.ApkArchiveInspector
 import com.aegis.core.HashScanner
+import com.aegis.core.ImageCheck
 import com.aegis.core.InputKind
 import com.aegis.core.ManifestAnalyzer
 import com.aegis.core.MessageAi
@@ -35,6 +36,7 @@ import java.security.MessageDigest
 import java.util.Locale
 
 internal const val MAX_TEXT = 12000
+private const val MAX_SHOWN_TEXT = 2000
 private const val MAX_APK = 100L * 1024 * 1024
 
 object Screens { const val HOME = 0; const val CHECK = 1; const val PROTECT = 2; const val MORE = 3 }
@@ -145,6 +147,33 @@ class AegisViewModel(application: android.app.Application) : AndroidViewModel(ap
         }
     }
 
+    /** A screenshot or photo: QR codes and text are read on the phone, then judged like links and messages. */
+    fun inspectImage(uri: Uri) {
+        revision++
+        work?.cancel()
+        val requestRevision = revision
+        mutable.value = mutable.value.copy(busy = true, result = null, screen = Screens.CHECK, input = "", shared = false, inputTooLong = false, kindOverride = null)
+        val useAi = mutable.value.aiEnabled
+        work = viewModelScope.launch {
+            val result = withContext(Dispatchers.Default) {
+                try {
+                    val context = getApplication<android.app.Application>()
+                    val read = ImageReader.read(context, uri)
+                    currentCoroutineContext().ensureActive()
+                    if (read.error != null) errorResult(Subject.IMAGE, "image_" + read.error)
+                    else {
+                        val analysis = ImageCheck.analyze(read.text, read.qr, ThreatIntel.get(context), if (useAi) AiModel.get(context).classifier else null)
+                        val host = analysis.findings.firstOrNull { it.code == "HOST" }?.detail?.removePrefix("Destination host: ")
+                        ResultUi(ResultSummary.of(analysis, Subject.IMAGE), host ?: "", image = ImageFacts(read.text?.trim()?.take(MAX_SHOWN_TEXT) ?: "", read.text != null, read.qr.map { ImageCheck.kind(it) }))
+                    }
+                } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { errorResult(Subject.IMAGE, "image_unreadable") }
+            }
+            if (revision == requestRevision) mutable.value = mutable.value.copy(busy = false, result = result)
+        }
+    }
+
+    fun imageRefused() { revision++; work?.cancel(); mutable.value = mutable.value.copy(busy = false, screen = Screens.CHECK, result = errorResult(Subject.IMAGE, "image_source")) }
+
     fun inspect(uri: Uri) {
         if (mutable.value.busy) return
         revision++
@@ -212,7 +241,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() { super.onResume(); AgentNotifier.clear(this) }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); acceptShared(intent) }
     private fun acceptShared(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
+        if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("image/") == true) {
+            try {
+                @Suppress("DEPRECATION")
+                val uri = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java) else intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                if (uri != null && ImageReader.acceptable(this, uri)) model.inspectImage(uri) else model.imageRefused()
+            } catch (_: RuntimeException) { model.imageRefused() }
+            intent.removeExtra(Intent.EXTRA_STREAM)
+        } else if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
             try {
                 intent.getStringExtra(Intent.EXTRA_TEXT)?.let(model::shared)
                 intent.removeExtra(Intent.EXTRA_TEXT)

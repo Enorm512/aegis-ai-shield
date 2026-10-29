@@ -28,6 +28,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <!-- Screenshot and QR check: one picture shared from another app is read on the phone. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
         </activity>
         <!-- Lint expects an exact-alarm permission with systemExempted; Android documents VPN apps as a separate qualifying case. Verify on device. -->
         <service android:name=".AegisVpnService" android:exported="true" android:permission="android.permission.BIND_VPN_SERVICE"

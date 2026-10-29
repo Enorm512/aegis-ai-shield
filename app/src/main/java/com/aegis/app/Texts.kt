@@ -3,6 +3,22 @@ package com.aegis.app
 /** Norwegian wording for stable finding codes. English wording comes from the core engine's own detail text. */
 internal fun norwegianFinding(code: String, detail: String): String = when (code) {
     "HOST" -> detail.replace("Destination host: ", "Målvert: ")
+    "QR_DEVICE_LINK" -> "En QR-kode i bildet logger inn en ny enhet på en meldings- eller chatkonto (for eksempel WhatsApp, Telegram, Signal eller Discord). Den som laget koden får tilgang til kontoen og meldingene når du skanner den. Skann slike koder bare når de vises på din egen datamaskin."
+    "QR_SIGNIN_SECRET" -> "En QR-kode i bildet inneholder den hemmelige nøkkelen til en kodegenerator for tofaktor. Alle som har bildet kan lage innloggingskodene dine. Send det aldri til noen, og ikke legg til en kode fra noen som har kontaktet deg."
+    "QR_CRYPTO_PAYMENT" -> "En QR-kode i bildet er en adresse for kryptobetaling. Kryptobetalinger kan ikke reverseres, og krav om betaling i krypto er vanlig i svindel."
+    "QR_PAYMENT_REQUEST" -> "En QR-kode i bildet er en betalingsforespørsel. Skanner du den, sender du penger; du mottar aldri penger på denne måten. Detaljer: $detail"
+    "QR_BANK_TRANSFER" -> "En QR-kode i bildet fyller ut en bankoverføring. Sjekk mottakeren med selskapet via en kanal du allerede stoler på før du betaler. Detaljer: $detail"
+    "QR_WIFI" -> "En QR-kode i bildet kobler til et Wi-Fi-nettverk. Et ukjent nettverk kan se trafikk som ikke er kryptert. Detaljer: $detail"
+    "QR_TEXT_MESSAGE" -> "En QR-kode i bildet lager en SMS. SMS til korte numre kan koste penger. Detaljer: $detail"
+    "QR_CONTACT" -> "En QR-kode i bildet inneholder kontaktopplysninger. Detaljer: $detail"
+    "QR_APP_LINK" -> "En QR-kode i bildet åpner en annen app. Aegis kan ikke se hvor den fører. Detaljer: $detail"
+    "QR_LINK" -> detail.replace("A QR code in the picture opens ", "En QR-kode i bildet åpner ").replace("a web address that could not be read", "en nettadresse som ikke kunne leses")
+    "QR_APP_DOWNLOAD" -> "QR-koden laster ned en appfil utenfor en appbutikk. Svindelsamtaler og -meldinger ber ofte folk installere apper på denne måten."
+    "IMAGE_QR_LIMIT" -> "Bare de første QR-kodene ble sjekket. Detaljer: $detail"
+    "IMAGE_OCR_UNAVAILABLE" -> "Tekst kunne ikke leses fra bildet på denne telefonen, så bare QR-koder ble sjekket."
+    "IMAGE_TEXT_READ" -> detail.replace("Text read from the picture: about ", "Tekst lest fra bildet: omtrent ").replace(" words.", " ord.")
+    "IMAGE_NOTHING_READ" -> if (detail.startsWith("Too little")) "For lite tekst ble lest fra bildet til å vurdere det." else "Ingen tekst eller QR-kode kunne leses fra bildet."
+    "IMAGE_LIMITS" -> "Bildet ble lest på denne telefonen. Tekstgjenkjenning kan lese feil eller hoppe over ord, noe som kan skjule eller skape faresignaler. Bilder, logoer, farger og hvem som sendte det vurderes ikke."
     "ML_SCAM_LANGUAGE" -> "Den eksperimentelle tekstklassifisereren på enheten gir ordlyden en høy score mot kjente svindelmeldinger, selv om ingen regel traff. Det er et svakt signal som kan ta feil; bekreft via en offisiell kanal."
     "ML_AGREES" -> "Den eksperimentelle tekstklassifisereren gir også ordlyden en høy score. Den er bygget på lignende eksempler som reglene, så dette er ikke uavhengig bekreftelse."
     "VERIFY_REQUEST" -> "Meldingen ber deg bekrefte eller oppdatere konto-, identitets- eller kortopplysninger under press."

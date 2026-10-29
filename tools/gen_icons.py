@@ -109,6 +109,9 @@ ICONS = {
     "ic_cross": [stroke(circle(12, 12, 8.8)), stroke(P(M(8.8, 8.8), L(15.2, 15.2), M(15.2, 8.8), L(8.8, 15.2)))],
     "ic_help": [stroke(circle(12, 12, 8.8)), stroke(P(M(9.6, 9.7), C(9.6, 8.3, 10.7, 7.5, 12, 7.5), C(13.3, 7.5, 14.4, 8.3, 14.4, 9.5), C(14.4, 11, 12, 11.2, 12, 13.2)), 1.7), stroke(dot(12, 16.4), 2.1)],
     "ic_chevron": [stroke(P(M(9.4, 5.6), L(15.8, 12), L(9.4, 18.4)))],
+    # Scan frame corners around a small QR pattern: screenshot and QR check.
+    "ic_image": [stroke(P(M(4, 8), V(5.6), Q(4, 4, 5.6, 4), H(8), M(16, 4), H(18.4), Q(20, 4, 20, 5.6), V(8), M(20, 16), V(18.4), Q(20, 20, 18.4, 20), H(16), M(8, 20), H(5.6), Q(4, 20, 4, 18.4), V(16))),
+                 stroke(rrect(7.8, 7.8, 3.4, 3.4, .6), 1.6), stroke(rrect(12.8, 7.8, 3.4, 3.4, .6), 1.6), stroke(rrect(7.8, 12.8, 3.4, 3.4, .6), 1.6), stroke(P(dot(13.6, 13.6), dot(16, 16), dot(13.6, 16), dot(16, 13.6)), 1.6)],
     "ic_paste": [stroke(rrect(5.6, 5.2, 12.8, 15.4, 2.2)), stroke(rrect(9, 3, 6, 4.2, 1.4)), stroke(P(M(9, 11.4), H(15), M(9, 14.6), H(13.2)))],
     "ic_power": [stroke(P(M(12, 3.6), V(11))), stroke(arc(12, 13, 7.6, -52, 232))],
 }

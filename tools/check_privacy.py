@@ -26,6 +26,15 @@ receivers = app.findall('receiver')
 assert [(r.get(ns + 'name'), r.get(ns + 'exported')) for r in receivers] == [('.BootReceiver', 'false')], 'Only the non-exported boot receiver may be declared'
 assert sorted(a.get(ns + 'name') for a in receivers[0].iter('action')) == ['android.intent.action.BOOT_COMPLETED', 'android.intent.action.MY_PACKAGE_REPLACED']
 assert not app.findall('provider'), 'No providers expected'
+main = [x for x in app.findall('activity') if x.get(ns + 'name') == '.MainActivity'][0]
+shares = sorted(d.get(ns + 'mimeType') for f in main.findall('intent-filter') if [a.get(ns + 'name') for a in f.iter('action')] == ['android.intent.action.SEND'] for d in f.iter('data'))
+assert shares == ['image/*', 'text/plain'], f'Share targets changed: {shares}'
+# The screenshot check reads pictures offline; libraries that report usage (ML Kit, Firebase, Play services) must not slip in.
+meta = (root / 'gradle/verification-metadata.xml').read_text(encoding='utf-8')
+for banned in ('com.google.mlkit', 'com.google.firebase', 'com.google.android.gms', 'com.google.android.datatransport'):
+    assert f'group="{banned}"' not in meta, f'Reporting library resolved: {banned}'
+img_src = (root / 'app/src/main/java/com/aegis/app/ImageReader.kt').read_text(encoding='utf-8')
+assert 'SCHEME_CONTENT' in img_src, 'Shared pictures must be content:// only'
 QUERIES = {'android.accessibilityservice.AccessibilityService', 'android.service.notification.NotificationListenerService', 'android.view.InputMethod',
            'android.app.action.DEVICE_ADMIN_ENABLED', 'android.provider.Telephony.SMS_DELIVER', 'android.net.VpnService'}
 queried = {a.get(ns + 'name') for q in manifest.findall('queries') for a in q.iter('action')}
@@ -36,7 +45,7 @@ assert svc_src.count('.addRoute(') == 2 and 'addRoute(DNS4, 32).addRoute(DNS6, 1
 assert 'addAllowedApplication' not in svc_src and 'addDisallowedApplication' not in svc_src
 ui = (root / 'app/src/main/java/com/aegis/app/Texts.kt').read_text()
 codes = set()
-for name in ['UrlAnalyzer.java', 'ScamAnalyzer.java', 'ThreatChecks.java', 'MessageAi.java']:
+for name in ['UrlAnalyzer.java', 'ScamAnalyzer.java', 'ThreatChecks.java', 'MessageAi.java', 'ImageCheck.java']:
     codes.update(re.findall(r'new Finding\("([A-Z_]+)"', (root/'core/src/main/java/com/aegis/core'/name).read_text()))
 translated = set(re.findall(r'"([A-Z_]+)"', ui.split('internal fun norwegianFinding', 1)[1]))
 assert codes <= translated, f'Missing Norwegian finding labels: {codes - translated}'
