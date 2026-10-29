@@ -15,9 +15,9 @@ grep -q "OK (1 test)" /tmp/setup.txt
 # Android saves package state (including "this app has been launched") and app-ops a few seconds after a change, and
 # `adb reboot` skips the orderly shutdown that would flush them. A failed run (40918864635) logged "Missing permission
 # state" for Aegis after boot and Aegis got no BOOT_COMPLETED, consistent with the app still looking never-launched.
-# So: give the system time to write, then reboot through the power manager like the power menu does.
+# So: give the system time to write first. (A power-manager reboot, `svc power reboot`, left the CI emulator offline.)
 sleep 20
-adb shell svc power reboot || adb reboot
+adb reboot
 # The orderly reboot returns before the device goes down: wait for the old boot to end, then for the device to come
 # back, tolerating "device offline" while the emulator restarts.
 for _ in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] || break; sleep 2; done
