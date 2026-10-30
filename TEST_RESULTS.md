@@ -1,6 +1,12 @@
-# Observed validation — 29 October 2026, build 0.8.7-rc18
+# Observed validation — 30 October 2026, build 0.8.8-rc19
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
+
+## Update: 0.8.8-rc19 screen-lock confirmation (commit 84f0dfa), GitHub Actions run 41108080369, all three jobs passed
+- **verify**: as before; `LimitTests` now 65 locally (19 new: which approvals are sensitive, and that the log records SCREEN_LOCK_CONFIRMED only when the check passed).
+- **device-smoke**: 34 tests, 0 failed in the progress lines seen (1 skipped on purpose, `BootRestartSetup`), job passed. New: `sensitiveApprovalNeedsTheScreenLockCheck` over the real Messenger interface, with the lock state faked: a tap alone leaves the request waiting and redeeming refused; a confirmed answer goes through; refusing needs no check.
+- **boot-restart**: passed.
+- Not tested: Android's fingerprint, face or PIN prompt itself has never run (the CI emulator has no screen lock), nor has the dialog's new text been looked at on screen.
 
 ## Update: 0.8.7-rc18 read-only agents and per-kind stops (commit 29fa9c1), GitHub Actions run 40965514123, all three jobs passed
 - **verify**: as before plus `LimitTests` (46 checks: a stopped kind refused for every agent with only CAPABILITY_STOPPED, others untouched, agents kept; stops cancel waiting and approved-but-unused approvals of that kind and block redeeming them; brokered requests obey stops; unknown callers still get UNKNOWN_AGENT; read-only refuses every kind but READ_SENSITIVE, which still asks and can be used; it blocks a send approved before it; unpairing and the kill switch clear read-only, stops survive the kill switch; security-log entries, no duplicates, restore writes nothing, logs verify and round-trip).
