@@ -1,6 +1,7 @@
 package com.aegis.app
 
 import android.Manifest
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -355,14 +356,25 @@ object AgentGateway {
             putString(AegisProtocol.KEY_APPROVAL_ID, approvalId); putBoolean(AegisProtocol.KEY_PERFORMED, performed); putString(AegisProtocol.KEY_REASON, reason) } }) }
     }
 
+    /** Whether the phone has a screen lock to confirm with. Replaced in tests; a CI emulator has none and cannot answer the prompt. */
+    @Volatile internal var screenLockSet: (Context) -> Boolean = { c -> c.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true }
+
+    /** True when approving [item] must pass the phone's own fingerprint, face or PIN check. Without a screen lock there is nothing to check against. */
+    fun needsScreenLock(context: Context, item: ApprovalItem) = screenLockSet(context) && AgentFirewall.needsStrongConfirmation(item.type, item.reasons, item.dataKinds)
+
     /**
      * The person's answer. For a brokered action, approving makes Aegis carry it out right here, from the ticket it
      * holds (the exact content that was shown), with [context] being the visible activity; the agent only hears the outcome.
+     * An approval that needs the screen lock is ignored unless [confirmed] says that check passed.
      */
-    @Synchronized fun resolve(context: Context, id: String, approve: Boolean) {
+    @Synchronized fun resolve(context: Context, id: String, approve: Boolean, confirmed: Boolean = false) {
+        if (approve && !confirmed) {
+            val item = mutableApprovals.value.firstOrNull { it.id == id }
+            if (if (item == null) screenLockSet(context) else needsScreenLock(context, item)) return
+        }
         val ticket = askTickets.take(id)
         val wasBroker = ticket != null || mutableApprovals.value.any { it.id == id && it.broker.isNotEmpty() }
-        val answered = firewall.resolve(id, approve)
+        val answered = firewall.resolve(id, approve, confirmed)
         if (wasBroker) {
             val reason = when {
                 !approve -> "DENIED_BY_USER"

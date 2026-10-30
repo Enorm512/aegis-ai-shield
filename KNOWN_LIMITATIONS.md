@@ -1,4 +1,4 @@
-# Known limitations — 0.8.7-rc18 (internal test build)
+# Known limitations — 0.8.8-rc19 (internal test build)
 
 - **Never run on a real phone.** Since 0.8.2-rc13 the debug build runs instrumented tests on an Android 15 (API 35) x86_64 emulator in CI; see TEST_RESULTS.md for exactly what they cover. Still unverified: real phones and OEM skins (Samsung One UI etc.), other Android versions, battery and Doze, the release/R8 build at runtime, and every flow that needs a person in a system dialog (VPN consent, Contacts, share sheet, file picker). Older sections below that say "never run on a device" predate the emulator tests; where an emulator test now covers the behaviour, TEST_RESULTS.md says so.
 - No production threat feed or signing key, no signed updater or reputation backend, no redirect fetching, global AI control, app inventory or permanent detection history. An experimental text classifier (off by default), a consented DNS-only VPN filter and a voluntary agent firewall exist but are unverified on devices.
@@ -11,6 +11,12 @@
 - A hostile document provider can block inside read() and delay cancellation despite byte and coroutine checks. Process death can leave private temporary files until next cold start. Cache deletion can fail; device testing required.
 - UI localizes labels/explanations, but technical details/underlying parser evidence can remain English. No automated visual/TalkBack review yet.
 - SDK35 baseline is not a current Play compliance assertion. No release key, signed production APK, legal review, fully resolved SBOM or independent security certification.
+
+## Screen-lock confirmation (0.8.8-rc19)
+- The system fingerprint, face or PIN prompt has never been run: the CI emulator has no screen lock, so only the gateway's refusal of an unconfirmed approval is tested, with the lock state faked. What the prompt offers depends on the phone and Android version.
+- With no screen lock on the phone there is nothing to check against; the dialog warns and a tap still approves.
+- It proves someone who can unlock the phone approved, not that they read the request. Only agent approvals are covered: connecting an agent with risky actions and turning stops or read-only off are still in-app confirmations.
+- The API used is deprecated since Android 10 but needs no permission, where the newer biometric prompt needs one more.
 
 ## Read-only mode and per-kind stops (0.8.7-rc18)
 - Like the rest of the gateway, they only limit what agents ask Aegis about. An agent that acts without asking (its own network access, Accessibility, other apps) is not stopped; only the full emergency stop's list of Accessibility and notification-access apps points at that.

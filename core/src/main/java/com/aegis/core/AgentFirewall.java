@@ -429,14 +429,30 @@ public final class AgentFirewall {
         return t == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(t.steps));
     }
 
+    /**
+     * True when approving this request should need the phone's own fingerprint, face or PIN check, not just a tap on
+     * Aegis' dialog: risky actions, sensitive reads, requests carrying sensitive data, and anything hijack wording, a
+     * chain rule or "Is this you?" flagged. An unknown type counts as sensitive. Takes the stored text form of an approval.
+     */
+    public static boolean needsStrongConfirmation(String type, Collection<String> reasons, Collection<String> dataKinds) {
+        ActionType t = null;
+        for (ActionType a : ActionType.values()) if (a.name().equals(type)) t = a;
+        if (t == null || HIGH_RISK.contains(t) || t == ActionType.READ_SENSITIVE || !dataKinds.isEmpty()) return true;
+        for (String r : reasons) if (r.startsWith("CHAIN_") || r.startsWith("INJECTION_") || r.equals("IS_THIS_YOU") || r.equals("SECRET_IN_OUTBOUND_DATA")) return true;
+        return false;
+    }
+
     /** Called by the user interface only. */
-    public synchronized boolean resolve(String approvalId, boolean approve) {
+    public synchronized boolean resolve(String approvalId, boolean approve) { return resolve(approvalId, approve, false); }
+
+    /** confirmed = the phone's own screen-lock check passed for this answer; the log records it. */
+    public synchronized boolean resolve(String approvalId, boolean approve, boolean confirmed) {
         expire();
         Pending p = pending.get(approvalId);
         if (p == null || p.approved != null) return false;
         p.approved = approve;
         if (!approve) pending.remove(approvalId); // a refusal frees its slot immediately
-        append(approve ? Event.USER_APPROVED : Event.USER_DENIED, p.agentId, p.type, p.host, null, Collections.emptyList());
+        append(approve ? Event.USER_APPROVED : Event.USER_DENIED, p.agentId, p.type, p.host, null, approve && confirmed ? Collections.singletonList("SCREEN_LOCK_CONFIRMED") : Collections.emptyList());
         return true;
     }
 

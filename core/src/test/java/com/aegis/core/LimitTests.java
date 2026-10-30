@@ -121,6 +121,25 @@ public final class LimitTests {
         f.setStopped(EnumSet.of(ActionType.INSTALL_APP), false);
         check(AgentFirewall.parseSecurityLog(f.exportSecurityLog()).entries().stream().anyMatch(x -> x.event() == Event.CAPABILITY_RESUMED), "new event round-trips");
 
+        // --- Which approvals need the phone's own lock check
+        for (ActionType t : ActionType.values()) {
+            boolean sensitive = t != ActionType.SEND_DATA && t != ActionType.SHARE_FILE && t != ActionType.MESSAGE_AGENT;
+            check(AgentFirewall.needsStrongConfirmation(t.name(), List.of(), List.of()) == sensitive, "by kind: " + t);
+        }
+        check(!AgentFirewall.needsStrongConfirmation("SEND_DATA", List.of("UNTRUSTED_DESTINATION"), List.of()), "a plain send elsewhere stays a tap");
+        check(AgentFirewall.needsStrongConfirmation("SEND_DATA", List.of(), List.of("CARD_NUMBER")), "sensitive data");
+        for (String r : List.of("CHAIN_PRIVATE_READ_THEN_SEND", "INJECTION_INDICATORS", "IS_THIS_YOU", "SECRET_IN_OUTBOUND_DATA"))
+            check(AgentFirewall.needsStrongConfirmation("SHARE_FILE", List.of(r), List.of()), "flagged: " + r);
+        check(AgentFirewall.needsStrongConfirmation("NOT_A_TYPE", List.of(), List.of()), "unknown type is sensitive");
+
+        // The log says when the lock check passed
+        f = fresh();
+        Decision c1 = ev(f, pay), c2 = ev(f, read);
+        check(f.resolve(c1.approvalId(), true, true) && f.resolve(c2.approvalId(), true), "both answered");
+        List<AuditEntry> ok = f.securityLog().stream().filter(x -> x.event() == Event.USER_APPROVED).toList();
+        check(ok.size() == 2 && ok.get(0).reasons().equals(List.of("SCREEN_LOCK_CONFIRMED")) && ok.get(1).reasons().isEmpty(), "recorded only when it happened: " + ok);
+        check(f.verifySecurityLog(), "still verifies");
+
         System.out.println("LimitTests: " + checks + " checks passed");
     }
 }

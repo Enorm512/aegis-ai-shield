@@ -126,7 +126,7 @@ fun AegisApp(s: UiState, vm: AegisViewModel, context: Context) {
         )
         if (reviewOpen && waiting > 0) AgentReviewDialog(pairings, approvals, powers, tx, s.dark, onDismiss = { reviewOpen = false },
             onPair = { req, allow, risky -> if (allow) AgentGateway.approvePairing(context, req, risky) else AgentGateway.rejectPairing(context, req) },
-            onResolve = { id, ok -> AgentGateway.resolve(context, id, ok) })
+            onResolve = { id, ok, confirmed -> AgentGateway.resolve(context, id, ok, confirmed) })
         else if (reviewOpen) LaunchedEffect(Unit) { reviewOpen = false }
         unpairTarget?.let { pkg ->
             ConfirmDialog(tx.t("Remove this AI agent?", "Fjerne denne KI-agenten?"), pkg + "\n\n" + tx.t("It will have to ask for permission again.", "Den må be om tillatelse på nytt."),

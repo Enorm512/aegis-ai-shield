@@ -1,5 +1,7 @@
 package com.aegis.app
 
+import android.app.Activity
+import android.app.KeyguardManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -76,10 +78,11 @@ private fun pairingReason(code: String, tx: Tx): String? = when (code) {
  * needs the quieter, outlined one. The dialog is pinned to the request it opened with: if a newer one jumps the queue
  * it closes instead of letting a tap land on something the person has not read. Pairing shows who is asking (label,
  * icon, install source) and the powers the app already holds; an app that could tap Aegis' buttons itself needs an
- * extra, deliberate confirmation.
+ * extra, deliberate confirmation. Sensitive approvals also pass the phone's own screen-lock check, which needs no
+ * permission and runs in system UI that another app cannot tap through.
  */
 @Composable
-fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>, powers: PowerState, tx: Tx, dark: Boolean, onDismiss: () -> Unit, onPair: (PairRequest, Boolean, Boolean) -> Unit, onResolve: (String, Boolean) -> Unit) {
+fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>, powers: PowerState, tx: Tx, dark: Boolean, onDismiss: () -> Unit, onPair: (PairRequest, Boolean, Boolean) -> Unit, onResolve: (String, Boolean, Boolean) -> Unit) {
     val context = LocalContext.current
     val pair = pairings.firstOrNull()
     val item = if (pair == null) approvals.firstOrNull() else null
@@ -94,6 +97,12 @@ fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>
     // Without the app info (not visible to Aegis), assume the worst: ask for the deliberate confirmation too.
     val needsConfirm = pair != null && (advice == null || advice.needsExtraConfirm())
     val agentCanTap = item != null && powers.apps.any { it.packageName() == item.agent && Capability.ACCESSIBILITY in it.capabilities() }
+    val sensitive = item != null && AgentFirewall.needsStrongConfirmation(item.type, item.reasons, item.dataKinds)
+    val needsLock = item != null && AgentGateway.needsScreenLock(context, item)
+    var lockFailed by remember { mutableStateOf(false) }
+    val lockCheck = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        if (r.resultCode == Activity.RESULT_OK && item != null) onResolve(item.id, true, true) else lockFailed = true
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Ico(R.drawable.ic_agent, tint = MaterialTheme.colorScheme.primary, size = 28.dp) },
@@ -152,18 +161,29 @@ fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>
                         Text(tx.t("What this agent did just before, in order:", "Hva agenten gjorde rett før, i rekkefølge:"), style = MaterialTheme.typography.labelMedium)
                         item.chain.forEach { Text(chainStepText(it, tx), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
                     }
+                    if (lockFailed) Text(tx.t("Not approved: the screen-lock check was not completed.", "Ikke godkjent: skjermlåssjekken ble ikke fullført."), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                    if (needsLock) Text(tx.t("Approving needs your fingerprint, face or screen PIN.", "Godkjenning krever fingeravtrykk, ansikt eller skjermkode."), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                    else if (sensitive) Text(tx.t("This phone has no screen lock, so Aegis cannot check that it is you approving. Set one up in Android's settings.", "Denne telefonen har ingen skjermlås, så Aegis kan ikke sjekke at det er du som godkjenner. Sett opp en i Androids innstillinger."), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     Text(tx.t("This request expires after 5 minutes.", "Forespørselen utløper etter 5 minutter."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 TextButton(onClick = onDismiss) { Text(tx.t("Decide later", "Avgjør senere")) }
             }
         },
         confirmButton = {
-            OutlinedButton(enabled = !needsConfirm || understood, onClick = { if (pair != null) onPair(pair, true, risky) else if (item != null) onResolve(item.id, true) }) {
+            OutlinedButton(enabled = !needsConfirm || understood, onClick = {
+                if (pair != null) onPair(pair, true, risky)
+                else if (item != null && needsLock) {
+                    lockFailed = false
+                    // Fixed text: nothing an agent wrote appears in the system prompt.
+                    @Suppress("DEPRECATION") val check = context.getSystemService(KeyguardManager::class.java)?.createConfirmDeviceCredentialIntent(tx.t("Approve AI agent request", "Godkjenn forespørsel fra KI-agent"), tx.t("Confirm that it is you.", "Bekreft at det er deg."))
+                    if (check != null) lockCheck.launch(check) else lockFailed = true
+                } else if (item != null) onResolve(item.id, true, false)
+            }) {
                 Text(if (pair != null) tx.t("Allow", "Tillat") else when (item?.broker) { "OPEN_URL" -> tx.t("Approve and open", "Godkjenn og åpne"); "SHARE_TEXT" -> tx.t("Approve and share", "Godkjenn og del"); else -> tx.t("Approve once", "Godkjenn én gang") })
             }
         },
         dismissButton = {
-            Button(onClick = { if (pair != null) onPair(pair, false, false) else if (item != null) onResolve(item.id, false) }) {
+            Button(onClick = { if (pair != null) onPair(pair, false, false) else if (item != null) onResolve(item.id, false, false) }) {
                 Text(if (pair != null) tx.t("Reject", "Avvis") else tx.t("Deny", "Nekt"))
             }
         },

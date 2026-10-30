@@ -115,6 +115,7 @@ class AgentGatewayDeviceTest {
     }
 
     @After fun cleanUp() {
+        AgentGateway.screenLockSet = { false }
         if (AgentGateway.lockdown.value) AgentGateway.releaseKillSwitch(context)
         if (AgentGateway.stopped.value.isNotEmpty()) AgentGateway.setStopped(context, AgentGateway.stopped.value, false)
         if (self in AgentGateway.readOnly.value) AgentGateway.setReadOnly(context, self, false)
@@ -253,6 +254,28 @@ class AgentGatewayDeviceTest {
             AgentGateway.unpair(context, self)
             assertFalse("unpairing clears read only", self in AgentGateway.readOnly.value)
             assertFalse(context.getSharedPreferences("agent_state", Context.MODE_PRIVATE).getStringSet("readonly", emptySet())!!.contains(self))
+        }
+    }
+
+    @Test fun sensitiveApprovalNeedsTheScreenLockCheck() {
+        pairSelf()
+        AgentGateway.screenLockSet = { true }
+        Client(context).use { c ->
+            val read = { request("READ_SENSITIVE", "", "") }
+            val asked = c.call(AegisProtocol.MSG_EVALUATE, read())
+            val id = asked.getString(AegisProtocol.KEY_APPROVAL_ID)!!
+            AgentGateway.resolve(context, id, true)
+            assertTrue("a tap alone does not approve", AgentGateway.approvals.value.any { it.id == id })
+            assertFalse(c.call(AegisProtocol.MSG_REDEEM, read().apply { putString(AegisProtocol.KEY_APPROVAL_ID, id) }).getBoolean(AegisProtocol.KEY_GRANTED))
+            AgentGateway.resolve(context, id, true, confirmed = true)
+            assertTrue(c.call(AegisProtocol.MSG_REDEEM, read().apply { putString(AegisProtocol.KEY_APPROVAL_ID, id) }).getBoolean(AegisProtocol.KEY_GRANTED))
+            assertTrue(AgentGateway.firewall.securityLog().any { it.event() == AgentFirewall.Event.USER_APPROVED && it.reasons() == listOf("SCREEN_LOCK_CONFIRMED") })
+
+            val plain = c.call(AegisProtocol.MSG_EVALUATE, request("SEND_DATA", "https://notes.example.net/x", "notes"))
+            val plainId = plain.getString(AegisProtocol.KEY_APPROVAL_ID)!!
+            assertTrue("a chain rule makes this send sensitive too", AgentGateway.needsScreenLock(context, AgentGateway.approvals.value.single { it.id == plainId }))
+            AgentGateway.resolve(context, plainId, false)
+            assertTrue("refusing never needs the check", AgentGateway.approvals.value.none { it.id == plainId })
         }
     }
 
