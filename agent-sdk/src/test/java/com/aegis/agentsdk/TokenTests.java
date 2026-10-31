@@ -85,6 +85,26 @@ public final class TokenTests {
         check(accepted == 0, "no mutated token verifies (" + accepted + ")");
         check(fuzz.verify(null, expect(), NOW).reason().equals("MALFORMED") && fuzz.verify(base, null, NOW).reason().equals("MALFORMED"), "nulls");
 
+        // --- Each token has one spelling: unused trailing Base64 bits and padding decode to the same bytes, and must still be refused
+        String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        int respelled = 0;
+        for (int i = 0; i < 40; i++) { // signatures vary in length, so some of these have spare bits and some do not
+            String one = ApprovalToken.issue(claims(kp, jti(n++), NOW, NOW + 60), signer(kp.getPrivate()));
+            String[] f = one.split("\\.", -1);
+            for (int part : new int[] {1, 2}) {
+                int rem = f[part].length() % 4;
+                String[] g = f.clone();
+                g[part] = f[part] + (rem == 2 ? "==" : rem == 3 ? "=" : "");
+                if (rem != 0) { check(fuzz.verify(String.join(".", g), expect(), NOW).reason().equals("MALFORMED"), "padded spelling refused"); respelled++; }
+                if (rem == 0) continue;
+                int last = alphabet.indexOf(f[part].charAt(f[part].length() - 1));
+                g[part] = f[part].substring(0, f[part].length() - 1) + alphabet.charAt(last + 1); // the lowest bit of the last character is unused
+                check(fuzz.verify(String.join(".", g), expect(), NOW).reason().equals("MALFORMED"), "other spelling of the same bytes refused");
+                respelled++;
+            }
+        }
+        check(respelled > 0, "the respelling cases ran");
+
         // --- Payload is canonical: alternative spellings of the same claims are rejected even if signed
         String canonical = new String(ApprovalToken.payload(claims(kp, jti(90), NOW, NOW + 60)), StandardCharsets.UTF_8);
         for (String alt : new String[] {canonical.replace("iat=" + NOW, "iat=0" + NOW), canonical.replace("amount=-1", "amount=-01"), canonical.replace("\n", "\r\n"), canonical + "extra=1\n", canonical.replace("aud=api.example.org", "aud=API.example.org")}) {

@@ -181,6 +181,9 @@ public final class ApprovalToken {
             if (parts.length != 2) return Result.fail("MALFORMED");
             byte[] p, sig;
             try { p = Base64.getUrlDecoder().decode(parts[0]); sig = Base64.getUrlDecoder().decode(parts[1]); } catch (IllegalArgumentException e) { return Result.fail("MALFORMED"); }
+            // One spelling per token: the decoder ignores padding and spare trailing bits, so other spellings of the same bytes would pass.
+            Base64.Encoder canonical = Base64.getUrlEncoder().withoutPadding();
+            if (!canonical.encodeToString(p).equals(parts[0]) || !canonical.encodeToString(sig).equals(parts[1])) return Result.fail("MALFORMED");
             Claims c = parsePayload(p);
             if (c == null) return Result.fail("MALFORMED");
             PublicKey k = keys.get(c.kid());
