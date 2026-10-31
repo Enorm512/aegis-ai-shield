@@ -74,15 +74,37 @@ private fun pairingReason(code: String, tx: Tx): String? = when (code) {
 }
 
 /**
+ * Returns a function that runs an action after the phone's own fingerprint, face or PIN check, which needs no
+ * permission and runs in system UI that another app cannot tap through. The action is told whether the check ran:
+ * without a screen lock there is nothing to check against, so it runs with false. A failed or cancelled check runs nothing.
+ */
+@Composable
+fun rememberLockGate(tx: Tx, onFailed: () -> Unit = {}): (((Boolean) -> Unit)) -> Unit {
+    val context = LocalContext.current
+    var waiting by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
+    val check = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        val action = waiting; waiting = null
+        if (r.resultCode == Activity.RESULT_OK && action != null) action(true) else onFailed()
+    }
+    return { action ->
+        if (!AgentGateway.screenLockSet(context)) action(false)
+        else {
+            // Fixed text: nothing an agent wrote appears in the system prompt.
+            @Suppress("DEPRECATION") val intent = context.getSystemService(KeyguardManager::class.java)?.createConfirmDeviceCredentialIntent(tx.t("Confirm in Aegis", "Bekreft i Aegis"), tx.t("Confirm that it is you.", "Bekreft at det er deg."))
+            if (intent != null) { waiting = action; check.launch(intent) } else onFailed()
+        }
+    }
+}
+
+/**
  * Shows the oldest waiting pairing or approval. The safe choice (Deny / Reject) is the prominent button; approving
  * needs the quieter, outlined one. The dialog is pinned to the request it opened with: if a newer one jumps the queue
  * it closes instead of letting a tap land on something the person has not read. Pairing shows who is asking (label,
  * icon, install source) and the powers the app already holds; an app that could tap Aegis' buttons itself needs an
- * extra, deliberate confirmation. Sensitive approvals also pass the phone's own screen-lock check, which needs no
- * permission and runs in system UI that another app cannot tap through.
+ * extra, deliberate confirmation. Sensitive approvals and risky connections also pass the phone's screen-lock check.
  */
 @Composable
-fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>, powers: PowerState, tx: Tx, dark: Boolean, onDismiss: () -> Unit, onPair: (PairRequest, Boolean, Boolean) -> Unit, onResolve: (String, Boolean, Boolean) -> Unit) {
+fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>, powers: PowerState, tx: Tx, dark: Boolean, onDismiss: () -> Unit, onPair: (PairRequest, Boolean, Boolean, Boolean) -> Unit, onResolve: (String, Boolean, Boolean) -> Unit) {
     val context = LocalContext.current
     val pair = pairings.firstOrNull()
     val item = if (pair == null) approvals.firstOrNull() else null
@@ -100,9 +122,7 @@ fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>
     val sensitive = item != null && AgentFirewall.needsStrongConfirmation(item.type, item.reasons, item.dataKinds)
     val needsLock = item != null && AgentGateway.needsScreenLock(context, item)
     var lockFailed by remember { mutableStateOf(false) }
-    val lockCheck = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
-        if (r.resultCode == Activity.RESULT_OK && item != null) onResolve(item.id, true, true) else lockFailed = true
-    }
+    val lockGate = rememberLockGate(tx) { lockFailed = true }
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Ico(R.drawable.ic_agent, tint = MaterialTheme.colorScheme.primary, size = 28.dp) },
@@ -135,6 +155,7 @@ fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>
                         Checkbox(checked = risky, onCheckedChange = null)
                         Text(tx.t("Also let it ask for risky actions: run commands, install apps, pay, use saved credentials, change settings (you still approve each one)", "La den også spørre om risikable handlinger: kjøre kommandoer, installere apper, betale, bruke lagret legitimasjon, endre innstillinger (du godkjenner fortsatt hver for seg)"), style = MaterialTheme.typography.bodySmall)
                     }
+                    if (lockFailed) Text(tx.t("Not allowed: the screen-lock check was not completed.", "Ikke tillatt: skjermlåssjekken ble ikke fullført."), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                     if (needsConfirm) Row(Modifier.toggleable(value = understood, role = Role.Checkbox, onValueChange = { understood = it }).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Checkbox(checked = understood, onCheckedChange = null)
                         Text(tx.t("I know this app has strong powers over my phone, and I still want to connect it.", "Jeg vet at denne appen har sterk makt over telefonen min, og jeg vil likevel koble den til."), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
@@ -171,19 +192,17 @@ fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>
         },
         confirmButton = {
             OutlinedButton(enabled = !needsConfirm || understood, onClick = {
-                if (pair != null) onPair(pair, true, risky)
-                else if (item != null && needsLock) {
-                    lockFailed = false
-                    // Fixed text: nothing an agent wrote appears in the system prompt.
-                    @Suppress("DEPRECATION") val check = context.getSystemService(KeyguardManager::class.java)?.createConfirmDeviceCredentialIntent(tx.t("Approve AI agent request", "Godkjenn forespørsel fra KI-agent"), tx.t("Confirm that it is you.", "Bekreft at det er deg."))
-                    if (check != null) lockCheck.launch(check) else lockFailed = true
-                } else if (item != null) onResolve(item.id, true, false)
+                lockFailed = false
+                if (pair != null && risky) lockGate { c -> onPair(pair, true, true, c) }
+                else if (pair != null) onPair(pair, true, false, false)
+                else if (item != null && needsLock) lockGate { c -> onResolve(item.id, true, c) }
+                else if (item != null) onResolve(item.id, true, false)
             }) {
                 Text(if (pair != null) tx.t("Allow", "Tillat") else when (item?.broker) { "OPEN_URL" -> tx.t("Approve and open", "Godkjenn og åpne"); "SHARE_TEXT" -> tx.t("Approve and share", "Godkjenn og del"); else -> tx.t("Approve once", "Godkjenn én gang") })
             }
         },
         dismissButton = {
-            Button(onClick = { if (pair != null) onPair(pair, false, false) else if (item != null) onResolve(item.id, false, false) }) {
+            Button(onClick = { if (pair != null) onPair(pair, false, false, false) else if (item != null) onResolve(item.id, false, false) }) {
                 Text(if (pair != null) tx.t("Reject", "Avvis") else tx.t("Deny", "Nekt"))
             }
         },
@@ -201,6 +220,7 @@ fun KillSwitchCard(lockdown: Boolean, pairedCount: Int, powers: PowerState, tx: 
     var confirmOn by remember { mutableStateOf(false) }
     var confirmOff by remember { mutableStateOf(false) }
     var removed by remember { mutableStateOf<Int?>(null) }
+    val lockGate = rememberLockGate(tx)
     Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = if (lockdown) strong.container.compositeOver(MaterialTheme.colorScheme.surfaceContainer) else MaterialTheme.colorScheme.surfaceContainer)) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionTitle(tx.t("Emergency stop for AI agents", "Nødstopp for KI-agenter"), icon = R.drawable.ic_power)
@@ -241,7 +261,7 @@ fun KillSwitchCard(lockdown: Boolean, pairedCount: Int, powers: PowerState, tx: 
     if (confirmOff) AlertDialog(onDismissRequest = { confirmOff = false },
         title = { Text(tx.t("Turn off emergency stop?", "Slå av nødstopp?")) },
         text = { GuardFromAccessibilityApps(); Text(tx.t("Agents can then ask to connect again, and you decide each one. Agents that were disconnected stay disconnected.", "Agenter kan da be om å koble til igjen, og du bestemmer for hver. Agenter som ble koblet fra forblir frakoblet.")) },
-        confirmButton = { OutlinedButton(onClick = { AgentGateway.releaseKillSwitch(context); removed = null; confirmOff = false }) { Text(tx.t("Turn off", "Slå av")) } },
+        confirmButton = { OutlinedButton(onClick = { lockGate { c -> AgentGateway.releaseKillSwitch(context, c); removed = null; confirmOff = false } }) { Text(tx.t("Turn off", "Slå av")) } },
         dismissButton = { Button(onClick = { confirmOff = false }) { Text(tx.t("Keep it on", "Behold den på")) } })
 }
 
@@ -262,6 +282,7 @@ private val stopGroups: List<Pair<Set<AgentFirewall.ActionType>, Pair<String, St
 @Composable
 fun CapabilityStopsCard(stopped: Set<AgentFirewall.ActionType>, tx: Tx, context: Context) {
     var confirmResume by remember { mutableStateOf<Set<AgentFirewall.ActionType>?>(null) }
+    val lockGate = rememberLockGate(tx)
     Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             SectionTitle(tx.t("Stop one kind of action", "Stopp én type handling"), icon = R.drawable.ic_lock)
@@ -284,7 +305,7 @@ fun CapabilityStopsCard(stopped: Set<AgentFirewall.ActionType>, tx: Tx, context:
         AlertDialog(onDismissRequest = { confirmResume = null },
             title = { Text(tx.t("Allow this again?", "Tillate dette igjen?")) },
             text = { GuardFromAccessibilityApps(); Text(tx.t("Connected agents can then ask for this again. Aegis still checks each request and asks you when it should.", "Tilkoblede agenter kan da be om dette igjen. Aegis sjekker fortsatt hver forespørsel og spør deg når den skal.")) },
-            confirmButton = { OutlinedButton(onClick = { AgentGateway.setStopped(context, types, false); confirmResume = null }) { Text(tx.t("Allow again", "Tillat igjen")) } },
+            confirmButton = { OutlinedButton(onClick = { lockGate { c -> AgentGateway.setStopped(context, types, false, c); confirmResume = null } }) { Text(tx.t("Allow again", "Tillat igjen")) } },
             dismissButton = { Button(onClick = { confirmResume = null }) { Text(tx.t("Keep it stopped", "Behold stoppet")) } })
     }
 }
@@ -293,6 +314,7 @@ fun CapabilityStopsCard(stopped: Set<AgentFirewall.ActionType>, tx: Tx, context:
 @Composable
 fun ReadOnlyRow(pkg: String, on: Boolean, tx: Tx, context: Context) {
     var confirmOff by remember { mutableStateOf(false) }
+    val lockGate = rememberLockGate(tx)
     Row(Modifier.fillMaxWidth().toggleable(value = on, role = Role.Switch, onValueChange = { want -> if (want) AgentGateway.setReadOnly(context, pkg, true) else confirmOff = true }).heightIn(min = 48.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -304,7 +326,7 @@ fun ReadOnlyRow(pkg: String, on: Boolean, tx: Tx, context: Context) {
     if (confirmOff) AlertDialog(onDismissRequest = { confirmOff = false },
         title = { Text(tx.t("Turn off read only?", "Slå av bare lesing?")) },
         text = { GuardFromAccessibilityApps(); Text(tx.t("$pkg can then ask for everything it was allowed when it connected. Aegis still checks each request.", "$pkg kan da be om alt den fikk lov til da den koblet til. Aegis sjekker fortsatt hver forespørsel.")) },
-        confirmButton = { OutlinedButton(onClick = { AgentGateway.setReadOnly(context, pkg, false); confirmOff = false }) { Text(tx.t("Turn off", "Slå av")) } },
+        confirmButton = { OutlinedButton(onClick = { lockGate { c -> AgentGateway.setReadOnly(context, pkg, false, c); confirmOff = false } }) { Text(tx.t("Turn off", "Slå av")) } },
         dismissButton = { Button(onClick = { confirmOff = false }) { Text(tx.t("Keep it on", "Behold den på")) } })
 }
 

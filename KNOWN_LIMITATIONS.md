@@ -1,4 +1,4 @@
-# Known limitations — 0.8.8-rc19 (internal test build)
+# Known limitations — 0.8.9-rc20 (internal test build)
 
 - **Never run on a real phone.** Since 0.8.2-rc13 the debug build runs instrumented tests on an Android 15 (API 35) x86_64 emulator in CI; see TEST_RESULTS.md for exactly what they cover. Still unverified: real phones and OEM skins (Samsung One UI etc.), other Android versions, battery and Doze, the release/R8 build at runtime, and every flow that needs a person in a system dialog (VPN consent, Contacts, share sheet, file picker). Older sections below that say "never run on a device" predate the emulator tests; where an emulator test now covers the behaviour, TEST_RESULTS.md says so.
 - No production threat feed or signing key, no signed updater or reputation backend, no redirect fetching, global AI control, app inventory or permanent detection history. An experimental text classifier (off by default), a consented DNS-only VPN filter and a voluntary agent firewall exist but are unverified on devices.
@@ -15,7 +15,8 @@
 ## Screen-lock confirmation (0.8.8-rc19)
 - The system fingerprint, face or PIN prompt has never been run: the CI emulator has no screen lock, so only the gateway's refusal of an unconfirmed approval is tested, with the lock state faked. What the prompt offers depends on the phone and Android version.
 - With no screen lock on the phone there is nothing to check against; the dialog warns and a tap still approves.
-- It proves someone who can unlock the phone approved, not that they read the request. Only agent approvals are covered: connecting an agent with risky actions and turning stops or read-only off are still in-app confirmations.
+- It proves someone who can unlock the phone approved, not that they read the request.
+- Since 0.8.9-rc20 it also guards risky connections, trusting a destination and lifting a stop, read only or the emergency stop. Only approvals record the check in the log. Other settings that weaken Aegis (turning DNS protection or the behaviour watch off, allow lists) are not covered, and a disconnected agent's old connection is not involved. An agent reconnecting without risky actions needs no check.
 - The API used is deprecated since Android 10 but needs no permission, where the newer biometric prompt needs one more.
 
 ## Read-only mode and per-kind stops (0.8.7-rc18)

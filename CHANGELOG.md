@@ -213,3 +213,8 @@ Version 0.8.8-rc19 (versionCode 25).
 - Core: `AgentFirewall.needsStrongConfirmation` decides which approvals are sensitive: risky actions, sensitive reads, requests carrying sensitive data, and anything flagged by hijack wording, a secret, a chain rule or "Is this you?". `resolve(id, approve, confirmed)` records `SCREEN_LOCK_CONFIRMED` in the log.
 - App: approving a sensitive request opens Android's own fingerprint, face or PIN check (`KeyguardManager.createConfirmDeviceCredentialIntent`), which needs no new permission. `AgentGateway.resolve` ignores an approval of such a request unless that check passed. A plain send to an untrusted destination stays one tap. Refusing never needs it. With no screen lock on the phone, the dialog says so and approval works as before.
 - Tests: 19 more `LimitTests` checks; emulator test `sensitiveApprovalNeedsTheScreenLockCheck` (gateway enforcement with the lock state faked; the system prompt itself cannot run in CI).
+
+## 0.8.9-rc20 screen-lock check for everything that widens what agents may do (2026-10-31)
+Version 0.8.9-rc20 (versionCode 26).
+- App: the screen-lock check from 0.8.8 now also guards connecting an agent with risky actions, trusting a destination, resuming a stopped kind of action, turning read only off and turning the emergency stop off. `AgentGateway` ignores these without the check, so it is not only the buttons. Adding limits never needs it. All of them share `rememberLockGate`.
+- Tests: emulator tests `wideningLimitsNeedsTheScreenLockCheck` and `NewScreensTest`, which opens the real screens, checks the texts and saves screenshots as a CI artifact.

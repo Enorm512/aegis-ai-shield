@@ -279,6 +279,42 @@ class AgentGatewayDeviceTest {
         }
     }
 
+    @Test fun wideningLimitsNeedsTheScreenLockCheck() {
+        val cert = AgentGateway.signerDigest(context.packageManager, self)!!
+        pairSelf()
+        val payments = setOf(AgentFirewall.ActionType.FINANCIAL_TRANSACTION)
+        AgentGateway.setStopped(context, payments, true)
+        AgentGateway.setReadOnly(context, self, true)
+        AgentGateway.screenLockSet = { true }
+        AgentGateway.setStopped(context, payments, false)
+        assertEquals("a stop stays without the check", payments, AgentGateway.stopped.value)
+        AgentGateway.setReadOnly(context, self, false)
+        assertTrue("read only stays without the check", self in AgentGateway.readOnly.value)
+        assertFalse("no trust without the check", AgentGateway.addTrusted(context, trustedHost))
+        AgentGateway.setStopped(context, setOf(AgentFirewall.ActionType.INSTALL_APP), true)
+        assertTrue("adding a stop needs no check", AgentFirewall.ActionType.INSTALL_APP in AgentGateway.stopped.value)
+
+        AgentGateway.setStopped(context, AgentGateway.stopped.value, false, confirmed = true)
+        assertTrue(AgentGateway.stopped.value.isEmpty())
+        AgentGateway.setReadOnly(context, self, false, confirmed = true)
+        assertFalse(self in AgentGateway.readOnly.value)
+        assertTrue(AgentGateway.addTrusted(context, trustedHost, confirmed = true))
+
+        AgentGateway.unpair(context, self)
+        AgentGateway.approvePairing(context, PairRequest(self, cert), risky = true)
+        assertEquals("risky connection refused without the check", AgentGateway.Status.UNPAIRED, AgentGateway.status(self, cert))
+        AgentGateway.approvePairing(context, PairRequest(self, cert), risky = true, confirmed = true)
+        assertTrue(self in AgentGateway.riskyGranted.value)
+
+        AgentGateway.screenLockSet = { false }
+        AgentGateway.killSwitch(context)
+        AgentGateway.screenLockSet = { true }
+        AgentGateway.releaseKillSwitch(context)
+        assertTrue("emergency stop stays without the check", AgentGateway.lockdown.value)
+        AgentGateway.releaseKillSwitch(context, confirmed = true)
+        assertFalse(AgentGateway.lockdown.value)
+    }
+
     @Test fun askedCallNeedsTheApprovalAndRedeemsOnce() {
         pairSelf()
         val dest = "https://notes.example.net/upload"

@@ -63,7 +63,10 @@ jobs:
           api-level: 35
           arch: x86_64
           # On failure keep the device log (crash stack traces) for the artifact below.
-          script: gradle connectedDebugAndroidTest || { adb logcat -d > /tmp/logcat.txt; exit 1; }
+          # Screenshots from NewScreensTest sit on the device; the app and its files are gone after the run.
+          script: |
+            gradle connectedDebugAndroidTest || { adb logcat -d > /tmp/logcat.txt; adb pull /data/local/tmp/aegis-shots /tmp/aegis-shots || true; exit 1; }
+            adb pull /data/local/tmp/aegis-shots /tmp/aegis-shots
       # Test results always; logcat only exists after a failure.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
@@ -71,6 +74,7 @@ jobs:
           name: device-smoke-results
           path: |
             /tmp/logcat.txt
+            /tmp/aegis-shots/
             app/build/outputs/androidTest-results/
             app/build/reports/androidTests/
   # Real reboot: protection that the person turned on must come back by itself (BootReceiver), without Always-on VPN.

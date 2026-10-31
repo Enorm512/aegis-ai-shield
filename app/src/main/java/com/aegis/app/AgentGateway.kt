@@ -231,7 +231,8 @@ object AgentGateway {
     }
 
     /** By default a paired agent may only ask about data and files; [risky] must be granted by the person on purpose. */
-    @Synchronized fun approvePairing(context: Context, req: PairRequest, risky: Boolean = false) {
+    @Synchronized fun approvePairing(context: Context, req: PairRequest, risky: Boolean = false, confirmed: Boolean = false) {
+        if (risky && lockCheckMissing(context, confirmed)) return
         if (mutableLockdown.value) { rejectPairing(context, req); return }
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(req.packageName, req.certSha256 + (if (risky) RISKY_FLAG else "")).apply()
         firewall.registerAgent(req.packageName, actionsFor(risky))
@@ -243,7 +244,8 @@ object AgentGateway {
     }
 
     /** Returns false when [raw] is not a plain host name or the list is full. */
-    @Synchronized fun addTrusted(context: Context, raw: String): Boolean {
+    @Synchronized fun addTrusted(context: Context, raw: String, confirmed: Boolean = false): Boolean {
+        if (lockCheckMissing(context, confirmed)) return false
         val h = raw.trim().lowercase(java.util.Locale.ROOT).removePrefix("https://").removeSuffix("/")
         if (!AgentFirewall.isTrustableHost(h) || mutableTrusted.value.size >= MAX_TRUSTED) return false
         context.applicationContext.getSharedPreferences(TRUST_PREFS, Context.MODE_PRIVATE).edit().putBoolean(h, true).apply()
@@ -300,7 +302,8 @@ object AgentGateway {
     }
 
     /** Ends the lockdown. Agents removed by the kill switch stay removed and must ask to pair again. */
-    @Synchronized fun releaseKillSwitch(context: Context) {
+    @Synchronized fun releaseKillSwitch(context: Context, confirmed: Boolean = false) {
+        if (lockCheckMissing(context, confirmed)) return
         val app = context.applicationContext
         firewall.releaseKillSwitch()
         app.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).edit().putBoolean("lockdown", false).apply()
@@ -312,7 +315,8 @@ object AgentGateway {
      * Stops or resumes kinds of action for every agent. Saved before anything else, like the kill switch, so a stop
      * survives the app being stopped. Waiting approvals of those kinds are cancelled (brokered ones told why).
      */
-    @Synchronized fun setStopped(context: Context, types: Set<AgentFirewall.ActionType>, on: Boolean) {
+    @Synchronized fun setStopped(context: Context, types: Set<AgentFirewall.ActionType>, on: Boolean, confirmed: Boolean = false) {
+        if (!on && lockCheckMissing(context, confirmed)) return
         val app = context.applicationContext
         val next = if (on) mutableStopped.value + types else mutableStopped.value - types
         app.getSharedPreferences(STATE_PREFS, Context.MODE_PRIVATE).edit().putStringSet("stopped", next.map { it.name }.toSet()).commit()
@@ -323,8 +327,8 @@ object AgentGateway {
     }
 
     /** Read-only mode for one paired agent: it may still ask to read (you still approve), and everything else is refused. */
-    @Synchronized fun setReadOnly(context: Context, pkg: String, on: Boolean) {
-        if (pkg !in mutablePaired.value) return
+    @Synchronized fun setReadOnly(context: Context, pkg: String, on: Boolean, confirmed: Boolean = false) {
+        if (pkg !in mutablePaired.value || (!on && lockCheckMissing(context, confirmed))) return
         val app = context.applicationContext
         saveReadOnly(app, if (on) mutableReadOnly.value + pkg else mutableReadOnly.value - pkg)
         firewall.setReadOnly(pkg, on)
@@ -358,6 +362,9 @@ object AgentGateway {
 
     /** Whether the phone has a screen lock to confirm with. Replaced in tests; a CI emulator has none and cannot answer the prompt. */
     @Volatile internal var screenLockSet: (Context) -> Boolean = { c -> c.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true }
+
+    /** Anything that widens what agents may do needs the lock check too, when the phone has a screen lock. */
+    private fun lockCheckMissing(context: Context, confirmed: Boolean) = !confirmed && screenLockSet(context)
 
     /** True when approving [item] must pass the phone's own fingerprint, face or PIN check. Without a screen lock there is nothing to check against. */
     fun needsScreenLock(context: Context, item: ApprovalItem) = screenLockSet(context) && AgentFirewall.needsStrongConfirmation(item.type, item.reasons, item.dataKinds)

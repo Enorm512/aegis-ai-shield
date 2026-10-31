@@ -125,7 +125,7 @@ fun AegisApp(s: UiState, vm: AegisViewModel, context: Context) {
             dismissButton = { TextButton(onClick = { showDisclosure = false }) { Text(tx.t("Cancel", "Avbryt")) } },
         )
         if (reviewOpen && waiting > 0) AgentReviewDialog(pairings, approvals, powers, tx, s.dark, onDismiss = { reviewOpen = false },
-            onPair = { req, allow, risky -> if (allow) AgentGateway.approvePairing(context, req, risky) else AgentGateway.rejectPairing(context, req) },
+            onPair = { req, allow, risky, confirmed -> if (allow) AgentGateway.approvePairing(context, req, risky, confirmed) else AgentGateway.rejectPairing(context, req) },
             onResolve = { id, ok, confirmed -> AgentGateway.resolve(context, id, ok, confirmed) })
         else if (reviewOpen) LaunchedEffect(Unit) { reviewOpen = false }
         unpairTarget?.let { pkg ->
@@ -403,7 +403,8 @@ private fun ProtectScreen(s: UiState, tx: Tx, stats: State<ProtectionStats>, run
                 OutlinedTextField(value = trustInput, onValueChange = { trustInput = it.take(253); trustError = false }, singleLine = true, isError = trustError, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
                     label = { Text(tx.t("Add a trusted host", "Legg til betrodd adresse")) },
                     supportingText = { if (trustError) Text(tx.t("Enter a plain host name such as api.example.org.", "Skriv et vanlig vertsnavn, for eksempel api.example.org.")) })
-                OutlinedButton(onClick = { if (AgentGateway.addTrusted(context, trustInput)) trustInput = "" else trustError = true }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(tx.t("Trust this host", "Stol på denne adressen")) }
+                val lockGate = rememberLockGate(tx)
+                OutlinedButton(onClick = { lockGate { c -> if (AgentGateway.addTrusted(context, trustInput, c)) trustInput = "" else trustError = true } }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(tx.t("Trust this host", "Stol på denne adressen")) }
             }
         }
         ServerTokenCard(tx, s.dark, context)
