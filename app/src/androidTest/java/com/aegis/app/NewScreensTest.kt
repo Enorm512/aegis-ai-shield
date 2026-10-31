@@ -70,6 +70,7 @@ class NewScreensTest {
         shot("1-stops-card")
         compose.onNodeWithText("Payments").performScrollTo().performClick()
         waitFor("Allow this again?")
+        compose.onAllNodesWithText("Payments").assertCountEquals(2) // the card's row and the dialog naming it
         shot("2-allow-again-dialog")
         compose.onNodeWithText("Keep it stopped").performClick()
         compose.onNodeWithText("Stopped").assertExists()
@@ -93,6 +94,7 @@ class NewScreensTest {
         openProtection()
         compose.onNodeWithText("Review 1 waiting request(s)").performScrollTo().performClick()
         waitFor("Approving needs your fingerprint, face or screen PIN.")
+        compose.onNodeWithText("$self wants to: read private data").assertExists()
         compose.onNodeWithText("What this agent did just before, in order:").assertExists()
         shot("5-approval-with-screen-lock")
         compose.onNodeWithText("Decide later").performScrollTo().performClick()

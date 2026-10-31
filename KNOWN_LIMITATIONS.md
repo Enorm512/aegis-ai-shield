@@ -1,4 +1,4 @@
-# Known limitations — 0.8.9-rc20 (internal test build)
+# Known limitations — 0.8.10-rc21 (internal test build)
 
 - **Never run on a real phone.** Since 0.8.2-rc13 the debug build runs instrumented tests on an Android 15 (API 35) x86_64 emulator in CI; see TEST_RESULTS.md for exactly what they cover. Still unverified: real phones and OEM skins (Samsung One UI etc.), other Android versions, battery and Doze, the release/R8 build at runtime, and every flow that needs a person in a system dialog (VPN consent, Contacts, share sheet, file picker). Older sections below that say "never run on a device" predate the emulator tests; where an emulator test now covers the behaviour, TEST_RESULTS.md says so.
 - No production threat feed or signing key, no signed updater or reputation backend, no redirect fetching, global AI control, app inventory or permanent detection history. An experimental text classifier (off by default), a consented DNS-only VPN filter and a voluntary agent firewall exist but are unverified on devices.

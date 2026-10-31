@@ -218,3 +218,7 @@ Version 0.8.8-rc19 (versionCode 25).
 Version 0.8.9-rc20 (versionCode 26).
 - App: the screen-lock check from 0.8.8 now also guards connecting an agent with risky actions, trusting a destination, resuming a stopped kind of action, turning read only off and turning the emergency stop off. `AgentGateway` ignores these without the check, so it is not only the buttons. Adding limits never needs it. All of them share `rememberLockGate`.
 - Tests: emulator tests `wideningLimitsNeedsTheScreenLockCheck` and `NewScreensTest`, which opens the real screens, checks the texts and saves screenshots as a CI artifact.
+
+## 0.8.10-rc21 clearer action names in agent dialogs (2026-10-31)
+Version 0.8.10-rc21 (versionCode 27).
+- "Allow this again?" now names the kind of action. The approval dialog, the list of earlier steps and the agent log say actions in everyday words in English and Norwegian ("read private data"), instead of the raw type name.

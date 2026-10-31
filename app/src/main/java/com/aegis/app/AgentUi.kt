@@ -161,7 +161,7 @@ fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>
                         Text(tx.t("I know this app has strong powers over my phone, and I still want to connect it.", "Jeg vet at denne appen har sterk makt over telefonen min, og jeg vil likevel koble den til."), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                     }
                 } else if (item != null) {
-                    Text(tx.t("${item.agent} wants to: ${item.type.lowercase().replace('_', ' ')}", "${item.agent} vil: ${item.type.lowercase().replace('_', ' ')}"), fontWeight = FontWeight.SemiBold)
+                    Text(tx.t("${item.agent} wants to: ${actionText(item.type, tx)}", "${item.agent} vil: ${actionText(item.type, tx)}"), fontWeight = FontWeight.SemiBold)
                     if (agentCanTap) Text(tx.t("Warning: this agent can also tap on your screen. Approve only if you are the one tapping now.", "Advarsel: denne agenten kan også trykke på skjermen. Godkjenn bare hvis det er du som trykker nå."), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                     if (item.broker == "OPEN_URL") Text(tx.t("Aegis will open this link itself, exactly as shown below. The agent cannot change it.", "Aegis åpner denne lenken selv, nøyaktig som vist under. Agenten kan ikke endre den."), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                     if (item.broker == "SHARE_TEXT") Text(tx.t("Aegis will open the share menu with exactly the text below; you choose the app. The agent cannot change it.", "Aegis åpner delemenyen med nøyaktig teksten under; du velger appen. Agenten kan ikke endre den."), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
@@ -304,7 +304,13 @@ fun CapabilityStopsCard(stopped: Set<AgentFirewall.ActionType>, tx: Tx, context:
     confirmResume?.let { types ->
         AlertDialog(onDismissRequest = { confirmResume = null },
             title = { Text(tx.t("Allow this again?", "Tillate dette igjen?")) },
-            text = { GuardFromAccessibilityApps(); Text(tx.t("Connected agents can then ask for this again. Aegis still checks each request and asks you when it should.", "Tilkoblede agenter kan da be om dette igjen. Aegis sjekker fortsatt hver forespørsel og spør deg når den skal.")) },
+            text = {
+                GuardFromAccessibilityApps()
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    stopGroups.firstOrNull { it.first == types }?.let { (_, label) -> Text(tx.t(label.first, label.second), fontWeight = FontWeight.SemiBold) }
+                    Text(tx.t("Connected agents can then ask for this again. Aegis still checks each request and asks you when it should.", "Tilkoblede agenter kan da be om dette igjen. Aegis sjekker fortsatt hver forespørsel og spør deg når den skal."))
+                }
+            },
             confirmButton = { OutlinedButton(onClick = { lockGate { c -> AgentGateway.setStopped(context, types, false, c); confirmResume = null } }) { Text(tx.t("Allow again", "Tillat igjen")) } },
             dismissButton = { Button(onClick = { confirmResume = null }) { Text(tx.t("Keep it stopped", "Behold stoppet")) } })
     }
@@ -330,8 +336,22 @@ fun ReadOnlyRow(pkg: String, on: Boolean, tx: Tx, context: Context) {
         dismissButton = { Button(onClick = { confirmOff = false }) { Text(tx.t("Keep it on", "Behold den på")) } })
 }
 
+/** An action type in everyday words, fitting after "wants to". */
+internal fun actionText(type: String, tx: Tx): String = when (type) {
+    "SEND_DATA" -> tx.t("send data", "sende data")
+    "SHARE_FILE" -> tx.t("share a file", "dele en fil")
+    "MESSAGE_AGENT" -> tx.t("message another agent", "sende melding til en annen agent")
+    "READ_SENSITIVE" -> tx.t("read private data", "lese private data")
+    "EXECUTE_COMMAND" -> tx.t("run a command", "kjøre en kommando")
+    "INSTALL_APP" -> tx.t("install an app", "installere en app")
+    "FINANCIAL_TRANSACTION" -> tx.t("make a payment", "betale")
+    "USE_CREDENTIAL" -> tx.t("use a saved password or key", "bruke et lagret passord eller en nøkkel")
+    "MODIFY_SETTINGS" -> tx.t("change settings", "endre innstillinger")
+    else -> type.lowercase().replace('_', ' ')
+}
+
 private fun eventText(e: AgentFirewall.AuditEntry, tx: Tx): String {
-    val what = e.type()?.name?.lowercase()?.replace('_', ' ') ?: ""
+    val what = e.type()?.name?.let { actionText(it, tx) } ?: ""
     val to = if (e.destinationHost().isNotEmpty()) " → " + e.destinationHost() else ""
     return when (e.event()) {
         Event.DECISION -> when (e.verdict()) {
@@ -354,8 +374,8 @@ private fun eventText(e: AgentFirewall.AuditEntry, tx: Tx): String {
         Event.BROKER_PERFORMED -> tx.t("Aegis carried out", "Aegis utførte") + ": $what$to"
         Event.BROKER_FAILED -> tx.t("Aegis did not carry out", "Aegis utførte ikke") + ": $what$to"
         Event.LOG_DAMAGED -> tx.t("Saved log was damaged or changed; started a new one", "Lagret logg var skadet eller endret; startet en ny")
-        Event.CAPABILITY_STOPPED -> tx.t("You stopped for all agents", "Du stoppet for alle agenter") + ": " + e.reasons().joinToString { it.lowercase().replace('_', ' ') }
-        Event.CAPABILITY_RESUMED -> tx.t("You allowed again for all agents", "Du tillot igjen for alle agenter") + ": " + e.reasons().joinToString { it.lowercase().replace('_', ' ') }
+        Event.CAPABILITY_STOPPED -> tx.t("You stopped for all agents", "Du stoppet for alle agenter") + ": " + e.reasons().joinToString { actionText(it, tx) }
+        Event.CAPABILITY_RESUMED -> tx.t("You allowed again for all agents", "Du tillot igjen for alle agenter") + ": " + e.reasons().joinToString { actionText(it, tx) }
         Event.READ_ONLY_ON -> tx.t("Set to read only", "Satt til bare lesing")
         Event.READ_ONLY_OFF -> tx.t("Read only turned off", "Bare lesing slått av")
     }
@@ -456,6 +476,6 @@ internal fun chainStepText(encoded: String, tx: Tx): String {
         "ASKED" -> tx.t("asked, not carried out", "spurt, ikke utført")
         else -> tx.t("refused", "nektet")
     }
-    return "• " + f[0].lowercase().replace('_', ' ') + (if (f[1].isNotEmpty()) " → " + f[1] else "") + " · " + outcome +
+    return "• " + actionText(f[0], tx) + (if (f[1].isNotEmpty()) " → " + f[1] else "") + " · " + outcome +
         if (f[3] == "1") tx.t(" · from outside content", " · fra innhold utenfra") else ""
 }

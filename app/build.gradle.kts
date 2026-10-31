@@ -12,8 +12,8 @@ android {
         applicationId = "com.aegis.aishield"
         minSdk = 26
         targetSdk = 36
-        versionCode = 26
-        versionName = "0.8.9-rc20"
+        versionCode = 27
+        versionName = "0.8.10-rc21"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     // Release signing comes only from an untracked keystore.properties (storeFile, storePassword, keyAlias, keyPassword).
