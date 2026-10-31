@@ -1,6 +1,13 @@
-# Observed validation — 30 October 2026, build 0.8.8-rc19
+# Observed validation — 31 October 2026, build 0.8.9-rc20
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
+
+## Update: 0.8.9-rc20 wider screen-lock check and on-screen review (commit 293c434), GitHub Actions run 41203561030, all three jobs passed
+- **verify**: as before.
+- **device-smoke**: 39 tests, job passed, 0 failed in the progress lines seen (1 skipped on purpose). New: `wideningLimitsNeedsTheScreenLockCheck` (lock state faked: a stop, read only, a trust, a risky connection and the emergency stop are each unchanged without the check and change with it) and `NewScreensTest` (4 tests through the real Compose screens, saving screenshots to the `device-smoke-results` artifact).
+- **boot-restart**: passed.
+- Looked at on screen (6 emulator screenshots, 320x640, dark theme, English): stops card, its "Allow this again?" dialog, read-only switch, its off dialog, and the approval dialog with and without a screen lock, including the chain list. Nothing cut off or overlapping. Small findings, not fixed: "Allow this again?" does not name the kind of action, and the approval dialog shows the raw "read sensitive".
+- Not tested: Android's real fingerprint, face or PIN prompt (no screen lock on the emulator); Norwegian text, light theme and larger font sizes on these screens; the pairing dialog's risky path on screen.
 
 ## Update: 0.8.8-rc19 screen-lock confirmation (commit 84f0dfa), GitHub Actions run 41108080369, all three jobs passed
 - **verify**: as before; `LimitTests` now 65 locally (19 new: which approvals are sensitive, and that the log records SCREEN_LOCK_CONFIRMED only when the check passed).

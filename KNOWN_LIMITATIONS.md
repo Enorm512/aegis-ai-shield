@@ -23,7 +23,7 @@
 - Like the rest of the gateway, they only limit what agents ask Aegis about. An agent that acts without asking (its own network access, Accessibility, other apps) is not stopped; only the full emergency stop's list of Accessibility and notification-access apps points at that.
 - "Read only" means the agent may only ask for `READ_SENSITIVE`; Aegis has no way to know whether an agent's own work is read-only.
 - The grouping of kinds in the card is fixed. Stopping "Sending" also stops sharing files and messaging other agents.
-- The new card and switches have not been looked at on screen; only the gateway behaviour is tested (host and emulator).
+- The card, switches and dialogs were reviewed from emulator screenshots in English and dark theme only (0.8.9-rc20).
 
 ## Cross-step chain rules (0.8.6-rc17)
 - Fixed rules with fixed windows (10-minute session gap, 2-minute provenance switch, 2,000-character tail per host). No false-positive rate has been measured; an agent that legitimately reads and then sends will ask more often.
