@@ -1,12 +1,18 @@
-# Observed validation — 31 October 2026, build 0.8.9-rc20
+# Observed validation — 31 October 2026, build 0.8.10-rc21
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
+
+## Update: 0.8.10-rc21 action names and token spelling fix (commit f562814), GitHub Actions run 41214385384, all three jobs passed
+- Run 41213587551 (commit 26809da) failed in **verify**: the `TokenTests` fuzz hit a respelled token that verified. It is intermittent because the key, and so the signature length, is random per run. Reproduced with a new fixed test, then fixed in `ApprovalToken.Verifier`; `TokenTests` (119 checks) then passed 40 of 40 repeat runs locally.
+- **device-smoke**: passed, including `NewScreensTest` with its two new text checks. Screenshots of the "Allow this again?" dialog naming the action and of "wants to: read private data" were looked at from run 41213587551.
+- **boot-restart**: passed.
+- Not tested: the Norwegian wording on screen, and everything listed as not tested under 0.8.9-rc20.
 
 ## Update: 0.8.9-rc20 wider screen-lock check and on-screen review (commit 293c434), GitHub Actions run 41203561030, all three jobs passed
 - **verify**: as before.
 - **device-smoke**: 39 tests, job passed, 0 failed in the progress lines seen (1 skipped on purpose). New: `wideningLimitsNeedsTheScreenLockCheck` (lock state faked: a stop, read only, a trust, a risky connection and the emergency stop are each unchanged without the check and change with it) and `NewScreensTest` (4 tests through the real Compose screens, saving screenshots to the `device-smoke-results` artifact).
 - **boot-restart**: passed.
-- Looked at on screen (6 emulator screenshots, 320x640, dark theme, English): stops card, its "Allow this again?" dialog, read-only switch, its off dialog, and the approval dialog with and without a screen lock, including the chain list. Nothing cut off or overlapping. Small findings, not fixed: "Allow this again?" does not name the kind of action, and the approval dialog shows the raw "read sensitive".
+- Looked at on screen (6 emulator screenshots, 320x640, dark theme, English): stops card, its "Allow this again?" dialog, read-only switch, its off dialog, and the approval dialog with and without a screen lock, including the chain list. Nothing cut off or overlapping. Two small wording findings were fixed in 0.8.10-rc21.
 - Not tested: Android's real fingerprint, face or PIN prompt (no screen lock on the emulator); Norwegian text, light theme and larger font sizes on these screens; the pairing dialog's risky path on screen.
 
 ## Update: 0.8.8-rc19 screen-lock confirmation (commit 84f0dfa), GitHub Actions run 41108080369, all three jobs passed
