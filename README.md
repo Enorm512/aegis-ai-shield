@@ -1,5 +1,7 @@
 # Aegis AI Shield
 
+*By Espen Normann*
+
 **A guard between AI agents and your Android phone.** AI assistants that integrate with Aegis ask it before they send data, share files, read private data, install apps, run commands or pay. Aegis allows, refuses or asks you, shows you what the agent did just before, and needs your fingerprint, face or PIN for the risky ones.
 
 > **Preview. Not real protection yet.** Version 0.8.10-rc21. Tested on an Android 15 emulator in CI, never on a real phone, and never reviewed by an independent security expert. Read KNOWN_LIMITATIONS.md before relying on any of it.
@@ -59,5 +61,12 @@ Written with heavy help from AI coding assistants, from the owner's requirements
 ## Contributing and security
 See CONTRIBUTING.md. Report vulnerabilities privately as described in SECURITY.md.
 
+## Author
+Created by **Espen Normann** (GitHub: [Enorm512](https://github.com/Enorm512)).
+
 ## Licence
-Apache License 2.0 (LICENSE). Third-party parts keep their own licences (NOTICE, DEPENDENCIES.md).
+Copyright 2026 Espen Normann. Licensed under the Apache License 2.0 (LICENSE).
+
+You may use, change and share this code, including commercially. If you distribute it or a work based on it, you must keep the copyright notices and include the attribution in NOTICE. The licence does not let you use the Aegis AI Shield name to suggest endorsement. Third-party parts keep their own licences (NOTICE, DEPENDENCIES.md).
+
+To cite this project, see CITATION.cff.

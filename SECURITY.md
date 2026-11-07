@@ -6,7 +6,7 @@ Aegis AI Shield is a preview. It has not had an independent security review and 
 Please report privately through GitHub: the repository's **Security** tab → **Report a vulnerability**. Do not open a public issue for a security problem.
 
 Useful to include:
-- the Aegis version (`versionName` in `app/build.gradle.kts`, or Android's app info for Aegis) and the Android version
+- the Aegis version (`versionName` in `app/build.gradle.kts`, or More → About Aegis in the app) and the Android version
 - what an attacker can do, and what they need first (for example a paired agent, an installed app, or Accessibility access)
 - steps or a test that shows it
 

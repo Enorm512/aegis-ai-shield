@@ -108,4 +108,12 @@ class NewScreensTest {
         shot("6-approval-no-screen-lock")
         compose.onNodeWithText("Decide later").performScrollTo().performClick()
     }
+
+    @Test fun aboutShowsTheAuthorAndInstalledVersion() = launch {
+        compose.onNodeWithText("More").performClick()
+        val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        compose.onNodeWithText("Made by Espen Normann. Open source under the Apache License 2.0.").performScrollTo()
+        compose.onNodeWithText("Version $version", substring = true).assertExists()
+        shot("7-about")
+    }
 }

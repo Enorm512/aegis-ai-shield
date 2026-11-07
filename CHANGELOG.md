@@ -223,3 +223,7 @@ Version 0.8.9-rc20 (versionCode 26).
 Version 0.8.10-rc21 (versionCode 27).
 - "Allow this again?" now names the kind of action. The approval dialog, the list of earlier steps and the agent log say actions in everyday words in English and Norwegian ("read private data"), instead of the raw type name.
 - Agent SDK: `ApprovalToken.Verifier` now refuses other Base64 spellings of a valid token (padding, spare trailing bits), which decoded to the same signed bytes and so verified. Found because the `TokenTests` fuzz failed intermittently in CI run 41213587551, depending on the random key's signature length. No claim could be changed this way; the built-in replay check uses the token ID and was not affected, but a server keying on the token text could have been. `TokenTests` now covers it directly.
+
+## Open-source preparation (2026-11-07)
+- Licensed under the Apache License 2.0, with LICENSE, NOTICE, SECURITY.md, CONTRIBUTING.md, CITATION.cff and a rewritten README crediting the author.
+- About screen: shows the installed version instead of a stale hard-coded one, and credits the author and licence.

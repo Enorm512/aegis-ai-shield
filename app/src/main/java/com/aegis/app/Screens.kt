@@ -481,7 +481,9 @@ private fun MoreScreen(s: UiState, vm: AegisViewModel, tx: Tx, context: Context,
                 SectionTitle(tx.t("About Aegis", "Om Aegis"), icon = R.drawable.ic_info)
                 Text(tx.t("No account, no ads, no analytics, no saved scan history. Network access is used only by the optional DNS protection.", "Ingen konto, ingen reklame, ingen analyse, ingen lagret skannehistorikk. Nettverkstilgang brukes bare av den valgfrie DNS-beskyttelsen."), style = MaterialTheme.typography.bodyMedium)
                 Text(tx.t("Aegis finds evidence; it cannot guarantee safety. Local checks can miss threats and flag harmless things. Never share passwords or one-time codes.", "Aegis finner indikasjoner; den kan ikke garantere trygghet. Lokale sjekker kan overse trusler og flagge harmløse ting. Del aldri passord eller engangskoder."), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(tx.t("Version 0.8.5-rc16 · preview build: DNS protection, the AI agent guard and the release build have not been tested on real devices yet.", "Versjon 0.8.5-rc16 · forhåndsversjon: DNS-beskyttelse, KI-agentvakten og utgivelsesbygget er ikke testet på ekte enheter ennå."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?" }
+                Text(tx.t("Version $version · preview: not yet tested on real phones or reviewed by an independent security expert.", "Versjon $version · forhåndsversjon: ennå ikke testet på ekte telefoner eller gjennomgått av en uavhengig sikkerhetsekspert."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tx.t("Made by Espen Normann. Open source under the Apache License 2.0.", "Laget av Espen Normann. Åpen kildekode under Apache-lisensen 2.0."), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
             }
         }
     }

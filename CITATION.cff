@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use or build on this software, please cite it as below."
+title: "Aegis AI Shield"
+abstract: "An Android guard between AI agents and the phone: agents ask before risky actions, and the person allows, refuses or confirms with the screen lock."
+type: software
+authors:
+  - family-names: Normann
+    given-names: Espen
+license: Apache-2.0
+repository-code: "https://github.com/Enorm512/aegis-ai-shield"
+version: "0.8.10-rc21"
+date-released: "2026-11-07"
