@@ -1,0 +1,22 @@
+Aegis AI Shield
+Copyright 2026 Espen Normann
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes or depends on third-party software and data, each under
+its own licence. See DEPENDENCIES.md for the full list. Bundled in the app:
+
+- Tesseract4Android 4.9.0 (Apache-2.0), which contains Tesseract 5.5.1
+  (Apache-2.0), Leptonica 1.85.0 (BSD-2-Clause style), libjpeg 9f (IJG licence)
+  and libpng 1.6.48 (libpng licence).
+- Tesseract trained data "eng" and "nor" from tesseract-ocr/tessdata_fast,
+  tag 4.1.0 (Apache-2.0), in app/src/main/assets/tessdata/.
+- ZXing core 3.5.3 (Apache-2.0).
+- AndroidX, Jetpack Compose, Kotlin and kotlinx.coroutines (Apache-2.0).
+
+The text classifier weights in ml/model/ were trained in this project from a
+corpus written for it; no third-party datasets or pretrained models are used.
+
+The private keys in tools/debug-test-key/ and app/src/androidTest/assets/ are
+published on purpose for testing. Only the debug build trusts them. Never use
+them for anything real.
