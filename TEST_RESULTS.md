@@ -2,32 +2,32 @@
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
 
-## Update: 0.8.10-rc21 action names and token spelling fix (commit f562814), GitHub Actions run 41214385384, all three jobs passed
-- Run 41213587551 (commit 26809da) failed in **verify**: the `TokenTests` fuzz hit a respelled token that verified. It is intermittent because the key, and so the signature length, is random per run. Reproduced with a new fixed test, then fixed in `ApprovalToken.Verifier`; `TokenTests` (119 checks) then passed 40 of 40 repeat runs locally.
+## Update: 0.8.10-rc21 action names and token spelling fix (commit e89568e), GitHub Actions run 41214385384, all three jobs passed
+- Run 41213587551 (commit 0988f45) failed in **verify**: the `TokenTests` fuzz hit a respelled token that verified. It is intermittent because the key, and so the signature length, is random per run. Reproduced with a new fixed test, then fixed in `ApprovalToken.Verifier`; `TokenTests` (119 checks) then passed 40 of 40 repeat runs locally.
 - **device-smoke**: passed, including `NewScreensTest` with its two new text checks. Screenshots of the "Allow this again?" dialog naming the action and of "wants to: read private data" were looked at from run 41213587551.
 - **boot-restart**: passed.
 - Not tested: the Norwegian wording on screen, and everything listed as not tested under 0.8.9-rc20.
 
-## Update: 0.8.9-rc20 wider screen-lock check and on-screen review (commit 293c434), GitHub Actions run 41203561030, all three jobs passed
+## Update: 0.8.9-rc20 wider screen-lock check and on-screen review (commit c29fca0), GitHub Actions run 41203561030, all three jobs passed
 - **verify**: as before.
 - **device-smoke**: 39 tests, job passed, 0 failed in the progress lines seen (1 skipped on purpose). New: `wideningLimitsNeedsTheScreenLockCheck` (lock state faked: a stop, read only, a trust, a risky connection and the emergency stop are each unchanged without the check and change with it) and `NewScreensTest` (4 tests through the real Compose screens, saving screenshots to the `device-smoke-results` artifact).
 - **boot-restart**: passed.
 - Looked at on screen (6 emulator screenshots, 320x640, dark theme, English): stops card, its "Allow this again?" dialog, read-only switch, its off dialog, and the approval dialog with and without a screen lock, including the chain list. Nothing cut off or overlapping. Two small wording findings were fixed in 0.8.10-rc21.
 - Not tested: Android's real fingerprint, face or PIN prompt (no screen lock on the emulator); Norwegian text, light theme and larger font sizes on these screens; the pairing dialog's risky path on screen.
 
-## Update: 0.8.8-rc19 screen-lock confirmation (commit 84f0dfa), GitHub Actions run 41108080369, all three jobs passed
+## Update: 0.8.8-rc19 screen-lock confirmation (commit 97bc27c), GitHub Actions run 41108080369, all three jobs passed
 - **verify**: as before; `LimitTests` now 65 locally (19 new: which approvals are sensitive, and that the log records SCREEN_LOCK_CONFIRMED only when the check passed).
 - **device-smoke**: 34 tests, 0 failed in the progress lines seen (1 skipped on purpose, `BootRestartSetup`), job passed. New: `sensitiveApprovalNeedsTheScreenLockCheck` over the real Messenger interface, with the lock state faked: a tap alone leaves the request waiting and redeeming refused; a confirmed answer goes through; refusing needs no check.
 - **boot-restart**: passed.
 - Not tested: Android's fingerprint, face or PIN prompt itself has never run (the CI emulator has no screen lock), nor has the dialog's new text been looked at on screen.
 
-## Update: 0.8.7-rc18 read-only agents and per-kind stops (commit 29fa9c1), GitHub Actions run 40965514123, all three jobs passed
+## Update: 0.8.7-rc18 read-only agents and per-kind stops (commit 8d842bb), GitHub Actions run 40965514123, all three jobs passed
 - **verify**: as before plus `LimitTests` (46 checks: a stopped kind refused for every agent with only CAPABILITY_STOPPED, others untouched, agents kept; stops cancel waiting and approved-but-unused approvals of that kind and block redeeming them; brokered requests obey stops; unknown callers still get UNKNOWN_AGENT; read-only refuses every kind but READ_SENSITIVE, which still asks and can be used; it blocks a send approved before it; unpairing and the kill switch clear read-only, stops survive the kill switch; security-log entries, no duplicates, restore writes nothing, logs verify and round-trip).
 - **device-smoke**: 33 tests started, 0 failed (1 skipped on purpose, `BootRestartSetup`). New: `AgentGatewayDeviceTest.capabilityStopRefusesThatKindAndKeepsThePairing` and `readOnlyAgentMayOnlyAskToRead`, both over the real Messenger interface, including the saved preferences.
 - **boot-restart**: passed.
 - Not tested: the new "Stop one kind of action" card, the read-only switches and their confirmation dialogs were not looked at on screen.
 
-## Update: 0.8.6-rc17 cross-step chain rules (commit 95499ce), GitHub Actions run 40943462646, all three jobs passed
+## Update: 0.8.6-rc17 cross-step chain rules (commit 0b3a98b), GitHub Actions run 40943462646, all three jobs passed
 - **verify**: as before plus `ChainTests` (53 checks: send after an approved and used sensitive read, the per-host approval after it, refused/unused reads not counting, earlier hijack wording, the content-to-user provenance switch and its 2-minute window, card number and key split across sends to one host, refusals unchanged, the shown chain, bounds, unpairing and kill switch forgetting the session). One `AgentBehaviourTests` case now uses user provenance for its refused request, because the new provenance rule rightly asked on the following call.
 - **device-smoke**: 31 tests started, the job passed (1 skipped on purpose, `BootRestartSetup`). New: `AgentGatewayDeviceTest.sendAfterApprovedReadAsksAndShowsTheChain` (over the real Messenger interface: a send to a trusted host is ALLOW; a sensitive read is asked, approved and redeemed; the same send then is ASK_USER with CHAIN_PRIVATE_READ_THEN_SEND, and the waiting approval carries the two earlier steps).
 - **boot-restart**: passed.
@@ -39,14 +39,14 @@ Regenerated from what actually ran. Replaces the 25 October 2026 version, which 
 - **boot-restart**: passed, tunnel up 8 s after boot. Two earlier runs failed (40912636439, 40918864635): BOOT_COMPLETED was delivered but Aegis was never started, and Android logged "Missing permission state" for Aegis. That fits the reboot coming seconds after install and first launch, before Android had saved that the app was launched, so the app still looked never-launched. The job now waits 20 s before `adb reboot`. An orderly `svc power reboot` was tried and left the CI emulator offline. One pass with the wait does not prove the cause.
 - Gateway tests of the policy itself switch the behaviour watch off (`AgentWatch.enabled = false`), because their many quick calls would rightly look automated.
 
-## Update: 0.8.4-rc15 screenshot and QR check (commits d5c7e99 and a86d448), GitHub Actions run 40914461674, all three jobs passed
+## Update: 0.8.4-rc15 screenshot and QR check (commits c236ac6 and fb52b4f), GitHub Actions run 40914461674, all three jobs passed
 - **verify**: as before plus `ImageCheckTests` (3,051 checks, 3,000 of them fuzz cases); privacy check now also pins the share targets and bans ML Kit/Firebase/Play services. Locally: lint 0 errors (36 warnings, mostly UseKtx/dependency-version notes); release gate's 16 KB alignment check passes for the new Tesseract native libraries (checked on the debug APK).
 - **device-smoke** (Android 15 / API 35 x86_64 emulator): **26 of 26 passed** (1 skipped on purpose). New `ImageCheckDeviceTest` (5): Tesseract read the text and ZXing the Telegram sign-in QR from a 1080×1700 screenshot drawn at test time, judged STRONG with QR_DEVICE_LINK and SECRET_REQUEST (0.46 s); a dark-mode screenshot's text and light-on-dark QR were read (0.55 s); a blank picture is "unclear"; file:// and Aegis-own addresses are refused; a PNG inserted into the media store and shared to MainActivity was checked automatically and showed "Strong signs of a scam in this picture" with "Don't scan this QR code" (0.96 s).
 - **boot-restart**: passed, tunnel up about 10 s after boot. **The first run of this commit (40912636439) failed this job**: no tunnel within 90 s after reboot and no Aegis service running; no logcat was captured. The script now waits 3 minutes and prints Aegis and boot-broadcast logcat lines on failure. Cause unknown; treat restart-after-reboot as flaky until it is seen again or explained (1 failure in 3 runs so far).
 
 Limits of this evidence: the screenshots were drawn with Android's own sans-serif font at a large size, which is the easy case for OCR; no real-world screenshots, photos of screens, other fonts or languages; no OCR accuracy figure; timings are from the CI emulator, not a phone.
 
-## Update: 0.8.3-rc14 (commit 01463b1), GitHub Actions run 40576139627, all three jobs passed
+## Update: 0.8.3-rc14 (commit 9e6e997), GitHub Actions run 40576139627, all three jobs passed
 - **verify**: as below, plus AppWatchTests (22 checks) and CorrelatorTests (32 checks); API-26 scan of core now 119 classes.
 - **device-smoke** (Android 15 / API 35 x86_64 emulator): **21 of 21 passed** (1 skipped on purpose: `BootRestartSetup`, which runs only inside the reboot job).
   - `AgentGatewayDeviceTest` (8): over the real Messenger interface, an unpaired caller gets NOT_PAIRED and a pairing request; once paired, policy ALLOW carries a Keystore-signed token that the reference verifier accepts once and rejects as replayed, with the wrong body, wrong audience or expired; a risky type is refused for a non-risky agent; an asked call cannot be redeemed before approval or with a different payload, is redeemed once with a USER_APPROVED token, then refused; the broker returns a one-shot launcher that runs once and is cancelled after, refuses http, and a brokered share waits for the person and reports DENIED_BY_USER; the kill switch removes agents, cancels approved-but-unused approvals, refuses with KILL_SWITCH_ON, persists, and released agents must pair again; the security log is saved encrypted (the package name is not in the file bytes) and its chain verifies; SealedStore rejects a flipped bit and a file copied under another name.
@@ -59,7 +59,7 @@ Limits of this evidence: the screenshots were drawn with Android's own sans-seri
 
 Limits of this evidence: one emulator image and Android version; the agent is Aegis itself in the gateway tests (same process, so no cross-process binder delivery); VPN consent via `appops`, not the dialog; one reboot; no real threat feed (debug key only); no battery, Doze, OEM or real-phone runs.
 
-## Update: first green CI and first emulator run (0.8.2-rc13, commit dbf6fe9)
+## Update: first green CI and first emulator run (0.8.2-rc13, commit b0155ff)
 GitHub Actions run 40545185052 (private repository Enorm512/aegis-ai-shield), both jobs passed:
 - **verify** (ubuntu-latest): privacy check, `core/run-tests.sh` (all core and agent-SDK host tests, first time on Linux), icon check, API-26 scans of core and SDK, `:core:check :agent-sdk:check`, debug builds and lint of app, SDK client and sample agent, release lint and build, and `check_release_apk.py` on the unsigned release APK.
 - **device-smoke** (Android 15 / API 35 x86_64 emulator, KVM-accelerated): `DashboardSmokeTest`, **7 of 7 passed**:
