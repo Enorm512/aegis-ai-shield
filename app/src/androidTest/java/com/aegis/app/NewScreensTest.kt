@@ -55,6 +55,7 @@ class NewScreensTest {
 
     @After fun cleanUp() {
         AgentGateway.screenLockSet = { false }
+        if (AgentGateway.lockdown.value) AgentGateway.releaseKillSwitch(context)
         if (AgentGateway.stopped.value.isNotEmpty()) AgentGateway.setStopped(context, AgentGateway.stopped.value, false)
         AgentGateway.approvals.value.forEach { AgentGateway.resolve(context, it.id, false) }
         if (AgentGateway.paired.value.containsKey(self)) AgentGateway.unpair(context, self)
@@ -71,6 +72,7 @@ class NewScreensTest {
         compose.onNodeWithText("Payments").performScrollTo().performClick()
         waitFor("Allow this again?")
         compose.onAllNodesWithText("Payments").assertCountEquals(2) // the card's row and the dialog naming it
+        compose.onNodeWithText("This phone has no screen lock, so any app that can tap the screen", substring = true).assertExists()
         shot("2-allow-again-dialog")
         compose.onNodeWithText("Keep it stopped").performClick()
         compose.onNodeWithText("Stopped").assertExists()
@@ -83,6 +85,7 @@ class NewScreensTest {
         shot("3-read-only-on")
         compose.onNodeWithText("Read only").performScrollTo().performClick()
         waitFor("Turn off read only?")
+        compose.onNodeWithText("This phone has no screen lock, so any app that can tap the screen", substring = true).assertExists()
         shot("4-read-only-off-dialog")
         compose.onNodeWithText("Keep it on").performClick()
         compose.onNodeWithText("Turn off read only?").assertDoesNotExist()
@@ -107,6 +110,28 @@ class NewScreensTest {
         waitFor("This phone has no screen lock")
         shot("6-approval-no-screen-lock")
         compose.onNodeWithText("Decide later").performScrollTo().performClick()
+    }
+
+    @Test fun allowAgainSaysTheScreenLockCheckComesNext() = launch {
+        AgentGateway.screenLockSet = { true }
+        AgentGateway.setStopped(context, payments, true)
+        openProtection()
+        compose.onNodeWithText("Payments").performScrollTo().performClick()
+        waitFor("Allow this again?")
+        compose.onNodeWithText("Needs your fingerprint, face or screen PIN.").assertExists()
+        compose.onNodeWithText("This phone has no screen lock, so any app that can tap the screen", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Keep it stopped").performClick()
+    }
+
+    @Test fun releasingTheEmergencyStopWarnsWithoutAScreenLock() = launch {
+        AgentGateway.killSwitch(context)
+        compose.onNodeWithText("Protection").performClick()
+        compose.onNodeWithText("Turn off emergency stop").performScrollTo().performClick()
+        waitFor("Turn off emergency stop?")
+        compose.onNodeWithText("This phone has no screen lock, so any app that can tap the screen", substring = true).assertExists()
+        shot("8-release-no-screen-lock")
+        compose.onNodeWithText("Keep it on").performClick()
+        assert(AgentGateway.lockdown.value)
     }
 
     @Test fun aboutShowsTheAuthorAndInstalledVersion() = launch {

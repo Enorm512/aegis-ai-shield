@@ -13,8 +13,8 @@
 - SDK35 baseline is not a current Play compliance assertion. No release key, signed production APK, legal review, fully resolved SBOM or independent security certification.
 
 ## Screen-lock confirmation (0.8.8-rc19)
-- The system fingerprint, face or PIN prompt has never been run: the CI emulator has no screen lock, so only the gateway's refusal of an unconfirmed approval is tested, with the lock state faked. What the prompt offers depends on the phone and Android version.
-- With no screen lock on the phone there is nothing to check against; the dialog warns and a tap still approves.
+- The system fingerprint, face or PIN prompt has run only once, by hand on a local emulator with a PIN (2026-11-09): it appeared for ending the emergency stop, and a wrong PIN plus Back left the stop on. The correct PIN, fingerprint and face were not tried. In CI the emulator has no screen lock, so only the gateway's refusal of an unconfirmed approval is tested, with the lock state faked. What the prompt offers depends on the phone and Android version.
+- With no screen lock on the phone there is nothing to check against; the dialogs warn (since 0.8.11-rc22 also those that lift a stop, read only or the emergency stop) and a tap still confirms. An emulator trial with an outside automation tool turned the emergency stop off this way by injected taps.
 - It proves someone who can unlock the phone approved, not that they read the request.
 - Since 0.8.9-rc20 it also guards risky connections, trusting a destination and lifting a stop, read only or the emergency stop. Only approvals record the check in the log. Other settings that weaken Aegis (turning DNS protection or the behaviour watch off, allow lists) are not covered, and a disconnected agent's old connection is not involved. An agent reconnecting without risky actions needs no check.
 - The API used is deprecated since Android 10 but needs no permission, where the newer biometric prompt needs one more.

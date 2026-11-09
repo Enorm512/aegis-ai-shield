@@ -404,6 +404,7 @@ private fun ProtectScreen(s: UiState, tx: Tx, stats: State<ProtectionStats>, run
                     label = { Text(tx.t("Add a trusted host", "Legg til betrodd adresse")) },
                     supportingText = { if (trustError) Text(tx.t("Enter a plain host name such as api.example.org.", "Skriv et vanlig vertsnavn, for eksempel api.example.org.")) })
                 val lockGate = rememberLockGate(tx)
+                if (trustInput.isNotBlank()) LockNote(tx)
                 OutlinedButton(onClick = { lockGate { c -> if (AgentGateway.addTrusted(context, trustInput, c)) trustInput = "" else trustError = true } }, Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(tx.t("Trust this host", "Stol på denne adressen")) }
             }
         }

@@ -227,3 +227,9 @@ Version 0.8.10-rc21 (versionCode 27).
 ## Open-source preparation (2026-11-07)
 - Licensed under the Apache License 2.0, with LICENSE, NOTICE, SECURITY.md, CONTRIBUTING.md, CITATION.cff and a rewritten README crediting the author.
 - About screen: shows the installed version instead of a stale hard-coded one, and credits the author and licence.
+
+## 0.8.11-rc22 no-screen-lock warning on every widening confirmation (2026-11-09)
+Version 0.8.11-rc22 (versionCode 28).
+- Found with an outside automation tool (Google ARTEMIS, which drives the phone over USB debugging and installs its own Accessibility helper) on an emulator: with no screen lock, injected taps turned the emergency stop off, and the "Turn off emergency stop?" dialog gave no hint that anything could. With a PIN set the release stopped at Android's own check, and a wrong PIN plus Back left the stop on.
+- App: the dialogs that end the emergency stop, allow a stopped kind of action again or turn read only off, the risky-actions choice when connecting an agent, and adding a trusted destination now say either "Needs your fingerprint, face or screen PIN." or, without a screen lock, that any app that can tap the screen could do this instead of the person. Behaviour is unchanged: without a lock a tap still confirms.
+- Tests: `NewScreensTest` checks the warning in the allow-again and read-only dialogs, the PIN line with the lock state faked, and the emergency-stop release dialog (new screenshot 8).

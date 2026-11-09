@@ -97,6 +97,20 @@ fun rememberLockGate(tx: Tx, onFailed: () -> Unit = {}): (((Boolean) -> Unit)) -
 }
 
 /**
+ * Under a confirmation that widens what agents may do: with a screen lock, says the phone's check comes next; without
+ * one, warns that nothing stops another app that can tap the screen from confirming it. An emulator test with an
+ * outside automation tool (taps injected over USB debugging) turned the emergency stop off this way on a phone with no lock.
+ */
+@Composable
+fun LockNote(tx: Tx) {
+    val context = LocalContext.current
+    if (AgentGateway.screenLockSet(context)) Text(tx.t("Needs your fingerprint, face or screen PIN.", "Krever fingeravtrykk, ansikt eller skjermkode."), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+    else Text(tx.t("This phone has no screen lock, so any app that can tap the screen could do this instead of you. Set one up in Android's settings.",
+        "Denne telefonen har ingen skjermlås, så enhver app som kan trykke på skjermen, kan gjøre dette i stedet for deg. Sett opp en i Androids innstillinger."),
+        color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+}
+
+/**
  * Shows the oldest waiting pairing or approval. The safe choice (Deny / Reject) is the prominent button; approving
  * needs the quieter, outlined one. The dialog is pinned to the request it opened with: if a newer one jumps the queue
  * it closes instead of letting a tap land on something the person has not read. Pairing shows who is asking (label,
@@ -155,6 +169,7 @@ fun AgentReviewDialog(pairings: List<PairRequest>, approvals: List<ApprovalItem>
                         Checkbox(checked = risky, onCheckedChange = null)
                         Text(tx.t("Also let it ask for risky actions: run commands, install apps, pay, use saved credentials, change settings (you still approve each one)", "La den også spørre om risikable handlinger: kjøre kommandoer, installere apper, betale, bruke lagret legitimasjon, endre innstillinger (du godkjenner fortsatt hver for seg)"), style = MaterialTheme.typography.bodySmall)
                     }
+                    if (risky) LockNote(tx)
                     if (lockFailed) Text(tx.t("Not allowed: the screen-lock check was not completed.", "Ikke tillatt: skjermlåssjekken ble ikke fullført."), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                     if (needsConfirm) Row(Modifier.toggleable(value = understood, role = Role.Checkbox, onValueChange = { understood = it }).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Checkbox(checked = understood, onCheckedChange = null)
@@ -260,7 +275,9 @@ fun KillSwitchCard(lockdown: Boolean, pairedCount: Int, powers: PowerState, tx: 
         dismissButton = { TextButton(onClick = { confirmOn = false }) { Text(tx.t("Cancel", "Avbryt")) } })
     if (confirmOff) AlertDialog(onDismissRequest = { confirmOff = false },
         title = { Text(tx.t("Turn off emergency stop?", "Slå av nødstopp?")) },
-        text = { GuardFromAccessibilityApps(); Text(tx.t("Agents can then ask to connect again, and you decide each one. Agents that were disconnected stay disconnected.", "Agenter kan da be om å koble til igjen, og du bestemmer for hver. Agenter som ble koblet fra forblir frakoblet.")) },
+        text = { GuardFromAccessibilityApps(); Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(tx.t("Agents can then ask to connect again, and you decide each one. Agents that were disconnected stay disconnected.", "Agenter kan da be om å koble til igjen, og du bestemmer for hver. Agenter som ble koblet fra forblir frakoblet."))
+            LockNote(tx) } },
         confirmButton = { OutlinedButton(onClick = { lockGate { c -> AgentGateway.releaseKillSwitch(context, c); removed = null; confirmOff = false } }) { Text(tx.t("Turn off", "Slå av")) } },
         dismissButton = { Button(onClick = { confirmOff = false }) { Text(tx.t("Keep it on", "Behold den på")) } })
 }
@@ -309,6 +326,7 @@ fun CapabilityStopsCard(stopped: Set<AgentFirewall.ActionType>, tx: Tx, context:
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     stopGroups.firstOrNull { it.first == types }?.let { (_, label) -> Text(tx.t(label.first, label.second), fontWeight = FontWeight.SemiBold) }
                     Text(tx.t("Connected agents can then ask for this again. Aegis still checks each request and asks you when it should.", "Tilkoblede agenter kan da be om dette igjen. Aegis sjekker fortsatt hver forespørsel og spør deg når den skal."))
+                    LockNote(tx)
                 }
             },
             confirmButton = { OutlinedButton(onClick = { lockGate { c -> AgentGateway.setStopped(context, types, false, c); confirmResume = null } }) { Text(tx.t("Allow again", "Tillat igjen")) } },
@@ -331,7 +349,9 @@ fun ReadOnlyRow(pkg: String, on: Boolean, tx: Tx, context: Context) {
     }
     if (confirmOff) AlertDialog(onDismissRequest = { confirmOff = false },
         title = { Text(tx.t("Turn off read only?", "Slå av bare lesing?")) },
-        text = { GuardFromAccessibilityApps(); Text(tx.t("$pkg can then ask for everything it was allowed when it connected. Aegis still checks each request.", "$pkg kan da be om alt den fikk lov til da den koblet til. Aegis sjekker fortsatt hver forespørsel.")) },
+        text = { GuardFromAccessibilityApps(); Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(tx.t("$pkg can then ask for everything it was allowed when it connected. Aegis still checks each request.", "$pkg kan da be om alt den fikk lov til da den koblet til. Aegis sjekker fortsatt hver forespørsel."))
+            LockNote(tx) } },
         confirmButton = { OutlinedButton(onClick = { lockGate { c -> AgentGateway.setReadOnly(context, pkg, false, c); confirmOff = false } }) { Text(tx.t("Turn off", "Slå av")) } },
         dismissButton = { Button(onClick = { confirmOff = false }) { Text(tx.t("Keep it on", "Behold den på")) } })
 }

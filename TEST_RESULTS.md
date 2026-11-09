@@ -2,6 +2,13 @@
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
 
+## Trial: outside automation tool against 0.8.10-rc21 on a local emulator (2026-11-09)
+Done by hand, not part of CI. Emulator: API 35 Google APIs x86_64, Pixel 6 profile, Windows host. Tool: Google ARTEMIS (commit 351ca84) with Gemini 2.5 Flash on a free key.
+- ARTEMIS installed its Accessibility helper, opened Aegis and described the home screen correctly. In a second task it flipped the wrong switch ("Installing apps" instead of "Payments"), missed the "Allow again" button and still reported success. Later tasks stopped on the free key's rate limit, so the checks below were done with a script injecting taps over USB debugging, the same way.
+- Aegis "App powers" listed the helper as high power ("Can read the screen and tap for you"), and the emergency-stop card listed it among apps that can still control the phone.
+- No screen lock: injected taps turned the emergency stop on and off again; the release dialog did not warn. Fixed in 0.8.11-rc22 with a warning (behaviour unchanged).
+- PIN set: ending the emergency stop opened Android's "Confirm that it is you" screen (black in screenshots); a wrong PIN and Back left the stop on. Re-allowing a stopped kind was not tried (the card is hidden during the emergency stop).
+
 ## Update: 0.8.10-rc21 action names and token spelling fix (commit e89568e), GitHub Actions run 41214385384, all three jobs passed
 - Run 41213587551 (commit 0988f45) failed in **verify**: the `TokenTests` fuzz hit a respelled token that verified. It is intermittent because the key, and so the signature length, is random per run. Reproduced with a new fixed test, then fixed in `ApprovalToken.Verifier`; `TokenTests` (119 checks) then passed 40 of 40 repeat runs locally.
 - **device-smoke**: passed, including `NewScreensTest` with its two new text checks. Screenshots of the "Allow this again?" dialog naming the action and of "wants to: read private data" were looked at from run 41213587551.
