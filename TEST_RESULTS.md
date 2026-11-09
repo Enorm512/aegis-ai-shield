@@ -1,6 +1,11 @@
-# Observed validation — 31 October 2026, build 0.8.10-rc21
+# Observed validation — 9 November 2026, build 0.8.11-rc22
 
 Regenerated from what actually ran. Replaces the 25 October 2026 version, which described the 0.2.0 state (permission-free manifest, no services, no APK) and no longer applied. Historical artefacts stay in `reports/` for provenance only.
+
+## Update: 0.8.11-rc22 no-screen-lock warning (commit 7fcc835), GitHub Actions run 42681936340, all three jobs passed
+- **device-smoke**: passed, including the two new `NewScreensTest` cases (PIN line with the lock state faked; emergency-stop release warning). Screenshots 2 (allow again) and 8 (turn off emergency stop) were looked at and show the red no-screen-lock warning.
+- **verify** and **boot-restart**: passed.
+- Not tested: the Norwegian wording, the risky-pairing and trusted-host warnings on screen (same component, no screenshot), and real phones.
 
 ## Trial: outside automation tool against 0.8.10-rc21 on a local emulator (2026-11-09)
 Done by hand, not part of CI. Emulator: API 35 Google APIs x86_64, Pixel 6 profile, Windows host. Tool: Google ARTEMIS (commit 351ca84) with Gemini 2.5 Flash on a free key.
